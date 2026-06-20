@@ -5,3 +5,4 @@ OFFSETS = {(-1, 0), (-1, -1), (0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1),
 PHYSICS_TILES = {"grass"}
 DANGER_TILES = ["spikes"]
 SCREEN_SHAKE_DECAY = 1
+SCROLL_LIMIT = 8

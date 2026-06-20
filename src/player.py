@@ -68,9 +68,12 @@ class Player:
                 if fm.y >= 0:
                     r.bottom = rect.top
                     self.falling = 0
+                    if self.controls["up"]:
+                        self.jumping = 0
                     self.collisions["down"] = True
                 elif fm.y < 0:
                     r.top = rect.bottom
+                    self.controls["up"] = False
                     self.collisions["up"] = True
                 self.movement.y = 0
                 self.pos.y = r.y

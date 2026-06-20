@@ -89,6 +89,16 @@ class App:
         self.screen.fill((0, 0, 0))
 
         # calculate camera scroll
+        lookahead = 10
+        if self.player.flip:
+            lookahead *= -1
+        target_scroll = [self.player.get_rect().centerx + lookahead - self.screen.get_width() * 0.5, self.player.get_rect().centery - self.screen.get_height() * 0.5]
+        
+        if abs(target_scroll[0] - self.scroll[0]) > SCROLL_LIMIT:
+            self.scroll[0] += (target_scroll[0] - self.scroll[0]) / 30 * self.dt
+        if abs(target_scroll[1] - self.scroll[0]) > SCROLL_LIMIT:
+            self.scroll[1] += (target_scroll[1] - self.scroll[1]) / 30 * self.dt
+
         screen_shake_offset = (
             (random.random() - 0.5) * self.screen_shake,
             (random.random() - 0.5) * self.screen_shake
@@ -116,7 +126,9 @@ class App:
                 elif event.type == pygame.KEYDOWN:
                     if event.key in {pygame.K_UP, pygame.K_SPACE, pygame.K_w}:
                         self.player.controls["up"] = True
-                        self.player.jumping = 0
+                        if self.player.falling < 5:
+                            self.player.jumping = 0
+                            self.player.falling = 873745
                     elif event.key in {pygame.K_DOWN, pygame.K_s}:
                         self.player.controls["down"] = True
                     elif event.key in {pygame.K_LEFT, pygame.K_a}:
