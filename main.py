@@ -18,6 +18,9 @@ class App:
 
         self.display = pygame.display.set_mode((WIDTH, HEIGHT), flags=pygame.RESIZABLE | pygame.OPENGL | pygame.DOUBLEBUF)
         self.screen = pygame.Surface((WIDTH // SCALE, HEIGHT // SCALE))
+        self.ls_scale = 1
+        self.level_draw_pos = pygame.Vector2(0, 0)
+        self.level_surf = pygame.Surface((TILE_SIZE * CHUNK_SIZE * LEVEL_WIDTH, TILE_SIZE * CHUNK_SIZE * LEVEL_HEIGHT))
 
         self.ctx: moderngl.Context = None
         self.prog: moderngl.Program = None
@@ -43,8 +46,6 @@ class App:
 
         self.player = Player(self, [10, 16], [20, 10])
 
-        self.ls_scale = 1
-        self.level_surf = pygame.Surface((TILE_SIZE * CHUNK_SIZE * LEVEL_WIDTH, TILE_SIZE * CHUNK_SIZE * LEVEL_HEIGHT))
     
     def reset(self):
         self.screen_shake = 0
@@ -67,6 +68,7 @@ class App:
         self.ctx = moderngl.create_context()
         self.prog = self.create_prog("data/shaders/screenShader.vert", "data/shaders/screenShader.frag")
         self.prog["screenTex"].value = 0
+        self.prog["lightTex"].value = 1
 
         vertices = array.array("f", [-1.0, 1.0, 0.0, 0.0, -1.0, -1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, -1.0, 1.0, 1.0])
         self.vbo = self.ctx.buffer(vertices)
@@ -78,9 +80,20 @@ class App:
         self.screenTex.swizzle = "BGRA"
         self.screenTex.repeat_x = False
         self.screenTex.repeat_y = False
+
+        light_size = (
+            math.ceil(self.screen.get_width() / TILE_SIZE) + 2,
+            math.ceil(self.screen.get_height() / TILE_SIZE) + 2,
+        )
+        self.lightTex = self.ctx.texture(light_size, 4)
+        self.lightTex.filter = (moderngl.LINEAR, moderngl.LINEAR)
+        self.lightTex.swizzle = "BGRA"
+        self.lightTex.repeat_x = False
+        self.lightTex.repeat_y = False
     
     def close(self):
         self.screenTex.release()
+        self.lightTex.release()
         pygame.quit()
         sys.exit()
     
@@ -103,7 +116,23 @@ class App:
         self.tile_map.draw(self.level_surf, render_scroll)
         self.player.draw(self.level_surf, render_scroll)
 
-        self.screen.blit(pygame.transform.scale(self.level_surf, (self.level_surf.get_width() * self.ls_scale, self.level_surf.get_height() * self.ls_scale)), (self.screen.get_width() // 2 - (self.level_surf.get_width() * self.ls_scale * 0.5), self.screen.get_height() // 2 - (self.level_surf.get_height() * self.ls_scale * 0.5)))
+        level_size = (self.level_surf.get_width() * self.ls_scale, self.level_surf.get_height() * self.ls_scale)
+        self.level_draw_pos = pygame.Vector2(
+            self.screen.get_width() * 0.5 - level_size[0] * 0.5,
+            self.screen.get_height() * 0.5 - level_size[1] * 0.5,
+        )
+        self.screen.blit(pygame.transform.scale(self.level_surf, level_size), self.level_draw_pos)
+
+        self.prog["scrollX"].value = render_scroll[0]
+        self.prog["scrollY"].value = render_scroll[1]
+        self.prog["scrWidth"].value = self.screen.get_width()
+        self.prog["scrHeight"].value = self.screen.get_height()
+        self.prog["levelX"].value = self.level_draw_pos.x
+        self.prog["levelY"].value = self.level_draw_pos.y
+        self.prog["levelScale"].value = self.ls_scale
+
+        light_surf = self.tile_map.get_light_data(self.screen, render_scroll)
+        self.lightTex.write(light_surf.get_view('1'))
 
     def run(self):
         while True:
@@ -119,11 +148,13 @@ class App:
                     self.display = pygame.display.set_mode((width, height), flags=pygame.RESIZABLE | pygame.OPENGL | pygame.DOUBLEBUF)
                     self.screen = pygame.Surface((width // SCALE, height // SCALE))
                     self.screenTex.release()
-                    self.setup_framebuffer()
+                    self.lightTex.release()
 
                     xscale = self.screen.get_width() / self.level_surf.get_width()
                     yscale = self.screen.get_height() / self.level_surf.get_height()
                     self.ls_scale = math.floor(min(xscale, yscale))
+                    self.level_draw_pos = pygame.Vector2(0, 0)
+                    self.setup_framebuffer()
 
                 elif event.type == pygame.KEYDOWN:
                     if event.key in {pygame.K_UP, pygame.K_SPACE, pygame.K_w}:
@@ -158,6 +189,7 @@ class App:
             # render using opengl
             self.ctx.clear(0, 0, 0)
             self.screenTex.use(0)
+            self.lightTex.use(1)
             self.vao.render(moderngl.TRIANGLE_STRIP) # render screen quad
 
             pygame.display.flip()
