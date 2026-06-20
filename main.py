@@ -19,8 +19,9 @@ class App:
 
         self.display = pygame.display.set_mode((WIDTH, HEIGHT), flags=pygame.RESIZABLE | pygame.OPENGL | pygame.DOUBLEBUF)
         self.screen = pygame.Surface((WIDTH // SCALE, HEIGHT // SCALE))
+        self.tileSurf = pygame.Surface(self.screen.get_size())
         self.ls_scale = 1
-        self.level_draw_pos = pygame.Vector2(0, 0)
+        self.level_surf_pos = pygame.Vector2(0, 0)
         self.level_surf = pygame.Surface((TILE_SIZE * CHUNK_SIZE * LEVEL_WIDTH, TILE_SIZE * CHUNK_SIZE * LEVEL_HEIGHT))
 
         self.ctx: moderngl.Context = None
@@ -79,6 +80,7 @@ class App:
         self.prog = self.create_prog("data/shaders/screenShader.vert", "data/shaders/screenShader.frag")
         self.prog["screenTex"].value = 0
         self.prog["lightTex"].value = 1
+        self.prog["tileTex"].value = 2
 
         vertices = array.array("f", [-1.0, 1.0, 0.0, 0.0, -1.0, -1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, -1.0, 1.0, 1.0])
         self.vbo = self.ctx.buffer(vertices)
@@ -90,6 +92,12 @@ class App:
         self.screenTex.swizzle = "BGRA"
         self.screenTex.repeat_x = False
         self.screenTex.repeat_y = False
+
+        self.tileTex = self.ctx.texture(self.screen.get_size(), 4)
+        self.tileTex.filter = (moderngl.NEAREST, moderngl.NEAREST)
+        self.tileTex.swizzle = "BGRA"
+        self.tileTex.repeat_x = False
+        self.tileTex.repeat_y = False
 
         light_size = (
             math.ceil(self.screen.get_width() / TILE_SIZE) + 2,
@@ -114,8 +122,8 @@ class App:
             enemy.update(self.dt)
 
         # render to screen
-        self.screen.fill((0, 0, 0))
-        self.level_surf.fill((0, 0, 0))
+        self.screen.fill((14, 130, 206))
+        self.level_surf.fill((14, 130, 206))
 
         screen_shake_offset = (
             (random.random() - 0.5) * self.screen_shake,
@@ -125,25 +133,31 @@ class App:
         render_scroll = (int(self.scroll[0] + screen_shake_offset[0]), int(self.scroll[1] + screen_shake_offset[1]))
         self.screen_shake = max(0, self.screen_shake - SCREEN_SHAKE_DECAY * self.dt)
 
-        self.tile_map.draw(self.level_surf, render_scroll)
 
         for enemy in self.enemies:
             enemy.draw(self.level_surf, render_scroll)
         self.player.draw(self.level_surf, render_scroll)
 
         level_size = (self.level_surf.get_width() * self.ls_scale, self.level_surf.get_height() * self.ls_scale)
-        self.level_draw_pos = pygame.Vector2(
+        self.level_surf_pos = pygame.Vector2(
             self.screen.get_width() * 0.5 - level_size[0] * 0.5,
             self.screen.get_height() * 0.5 - level_size[1] * 0.5,
         )
-        self.screen.blit(pygame.transform.scale(self.level_surf, level_size), self.level_draw_pos)
+        self.screen.blit(pygame.transform.scale(self.level_surf, level_size), self.level_surf_pos)
+
+        self.level_surf.fill((0, 0, 0))
+        self.tile_map.draw(self.level_surf, render_scroll)
+        self.tileSurf.fill((0, 0, 0))
+        self.tileSurf.blit(pygame.transform.scale(self.level_surf, level_size), self.level_surf_pos)
 
         self.prog["scrollX"].value = render_scroll[0]
         self.prog["scrollY"].value = render_scroll[1]
         self.prog["scrWidth"].value = self.screen.get_width()
         self.prog["scrHeight"].value = self.screen.get_height()
-        self.prog["levelX"].value = self.level_draw_pos.x
-        self.prog["levelY"].value = self.level_draw_pos.y
+        self.prog["levelX"].value = self.level_surf_pos.x
+        self.prog["levelY"].value = self.level_surf_pos.y
+        self.prog["levelW"].value = level_size[0]
+        self.prog["levelH"].value = level_size[1]
         self.prog["levelScale"].value = self.ls_scale
 
         light_surf = self.tile_map.get_light_data(self.screen, render_scroll)
@@ -162,13 +176,15 @@ class App:
                     self.ctx.viewport = (0, 0, width, height)
                     self.display = pygame.display.set_mode((width, height), flags=pygame.RESIZABLE | pygame.OPENGL | pygame.DOUBLEBUF)
                     self.screen = pygame.Surface((width // SCALE, height // SCALE))
+                    self.tileSurf = pygame.Surface(self.screen.get_size())
                     self.screenTex.release()
                     self.lightTex.release()
+                    self.tileTex.release()
 
                     xscale = self.screen.get_width() / self.level_surf.get_width()
                     yscale = self.screen.get_height() / self.level_surf.get_height()
                     self.ls_scale = math.floor(min(xscale, yscale))
-                    self.level_draw_pos = pygame.Vector2(0, 0)
+                    self.level_surf_pos = pygame.Vector2(0, 0)
                     self.setup_framebuffer()
 
                 elif event.type == pygame.KEYDOWN:
@@ -200,11 +216,13 @@ class App:
 
             self.update()
             self.screenTex.write(self.screen.get_view('1')) # update opengl texture using pygame surface data
+            self.tileTex.write(self.tileSurf.get_view('1'))
 
             # render using opengl
             self.ctx.clear(0, 0, 0)
             self.screenTex.use(0)
             self.lightTex.use(1)
+            self.tileTex.use(2)
             self.vao.render(moderngl.TRIANGLE_STRIP) # render screen quad
 
             pygame.display.flip()

@@ -1,4 +1,4 @@
-#The-Revenge-Cycle
+# The-Revenge-Cycle
 
 # TODO:
  - [X] Platformer template
@@ -6,6 +6,7 @@
  - [X] Tiles
  - [ ] Player (idle, run & jump animations + land)
  - [ ] Same for enemies (guests, cooks (kitchen staff), chef)
- - [ ] Furniture
+ - [ ] Furniture (table + chair, oven, kitchen island, sink, lights hanging from ceiling)
+ - [ ] Background + ceiling for indoors
  - [ ] Soundtrack
  - [ ] Weapons (knife, spoon, big gun and knife for chef (for wrecking the restaurant), little container for range attacks (chilli powder, salt, alcohol etc), broom, slab of meat)
