@@ -22,9 +22,9 @@ class Player:
         self.movement = pygame.Vector2(0, 0)
 
         # player stats ig
-        self.speed = 0.7
+        self.speed = 1.0
         self.jump_height = 9 # number of frames we can jump for
-        self.jump_strength = 3 # value of movement.y each frame during jump
+        self.jump_strength = 4 # value of movement.y each frame during jump
         self.gravity = 0.3
         self.friction = 0.7
         self.collisions = {"right": False, "left": False, "up": False, "down": False} # useful to keep track of

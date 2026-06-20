@@ -6,6 +6,7 @@ from src.bip import *
 SCR_WIDTH = 2100
 SCR_HEIGHT = 1200
 SCALE = 3 # screen scaling
+LEVEL_WIDTH = 20
 
 # json map path
 MAP = "data/maps/0.json"
@@ -47,6 +48,7 @@ class Editor:
         # assets
         self.assets = {
             "grass": self.load_tileset(pygame.image.load("data/images/tiles/grass.png").convert()),
+            "enemy": [load_image("tiles/enemy.png")]
         }
         # {"start": [x, y], "end": [x, y]}
 

@@ -4,6 +4,7 @@ from src.bip import *
 from src.util import *
 from src.tiles import *
 from src.player import Player
+from src.enemies import Enemy
 
 pygame.init()
 pygame.mixer.init()
@@ -41,10 +42,19 @@ class App:
         self.tile_map = TileMap(self)
         self.tile_map.load("data/maps/0.json")
 
+        # extract enemies
+        self.enemies = []
+        for loc in self.tile_map.tile_map.copy():
+            if self.tile_map.tile_map[loc]["type"] == "enemy":
+                tile = self.tile_map.tile_map[loc]
+                print(tile)
+                self.enemies.append(Enemy(self, [16, 32], [self.tile_map.tile_map[loc]["pos"][0] * TILE_SIZE, self.tile_map.tile_map[loc]["pos"][1] * TILE_SIZE]))
+                del self.tile_map.tile_map[loc]
+
         self.scroll = pygame.Vector2(0, 0)
         self.screen_shake = 0
 
-        self.player = Player(self, [10, 16], [20, 10])
+        self.player = Player(self, [16, 32], [20, 10])
 
     
     def reset(self):
@@ -100,6 +110,8 @@ class App:
     def update(self):
         # update entities
         self.player.update(self.dt)
+        for enemy in self.enemies:
+            enemy.update(self.dt)
 
         # render to screen
         self.screen.fill((0, 0, 0))
@@ -114,6 +126,9 @@ class App:
         self.screen_shake = max(0, self.screen_shake - SCREEN_SHAKE_DECAY * self.dt)
 
         self.tile_map.draw(self.level_surf, render_scroll)
+
+        for enemy in self.enemies:
+            enemy.draw(self.level_surf, render_scroll)
         self.player.draw(self.level_surf, render_scroll)
 
         level_size = (self.level_surf.get_width() * self.ls_scale, self.level_surf.get_height() * self.ls_scale)
