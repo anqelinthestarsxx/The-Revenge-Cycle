@@ -1,14 +1,12 @@
 import pygame, sys, time, moderngl, array
 
+from src.bip import *
 from src.util import *
 from src.tiles import *
 
 pygame.init()
 pygame.mixer.init()
 pygame.font.init()
-
-WIDTH, HEIGHT = 1200, 900
-SCALE = 4
 
 class App:
     def __init__(self):

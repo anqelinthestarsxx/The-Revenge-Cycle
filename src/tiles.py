@@ -1,12 +1,9 @@
 import pygame, math, time, random
 
+from .bip import *
 from .util import read_json
 from .grass import GrassManager
 
-TILE_SIZE = 16
-OFFSETS = {(-1, 0), (-1, -1), (0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (0, 0)}
-PHYSICS_TILES = {"grass"}
-DANGER_TILES = ["spikes"]
 
 class TileMap:
     def __init__(self, app):

@@ -1,6 +1,7 @@
 import pygame, math
 
-TILE_SIZE = 8
+from .bip import *
+
 class StationaryQuads:
     def __init__(self, items, chunk_size):
         self.items = list(items)
