@@ -1,8 +1,9 @@
-import pygame, sys, time, moderngl, array
+import pygame, sys, time, moderngl, array, random
 
 from src.bip import *
 from src.util import *
 from src.tiles import *
+from src.player import Player
 
 pygame.init()
 pygame.mixer.init()
@@ -36,6 +37,15 @@ class App:
 
         self.tile_map = TileMap(self)
         self.tile_map.load("data/maps/0.json")
+
+        self.scroll = pygame.Vector2(0, 0)
+        self.screen_shake = 0
+
+        self.player = Player(self, [10, 16], [20, 10])
+    
+    def reset(self):
+        self.screen_shake = 0
+        self.scroll = pygame.Vector2(0, 0)
     
     def create_prog(self, vert_path, frag_path):
         vert_src = ""
@@ -72,8 +82,23 @@ class App:
         sys.exit()
     
     def update(self):
+        # update entities
+        self.player.update(self.dt)
+
+        # render to screen
         self.screen.fill((0, 0, 0))
-        self.tile_map.draw(self.screen, [0, 0])
+
+        # calculate camera scroll
+        screen_shake_offset = (
+            (random.random() - 0.5) * self.screen_shake,
+            (random.random() - 0.5) * self.screen_shake
+        )
+
+        render_scroll = (int(self.scroll[0] + screen_shake_offset[0]), int(self.scroll[1] + screen_shake_offset[1]))
+        self.screen_shake = max(0, self.screen_shake - SCREEN_SHAKE_DECAY * self.dt)
+
+        self.tile_map.draw(self.screen, render_scroll)
+        self.player.draw(self.screen, render_scroll)
     
     def run(self):
         while True:
@@ -88,6 +113,25 @@ class App:
                     self.screen = pygame.Surface((width // SCALE, height // SCALE))
                     self.screenTex.release()
                     self.setup_framebuffer()
+                elif event.type == pygame.KEYDOWN:
+                    if event.key in {pygame.K_UP, pygame.K_SPACE, pygame.K_w}:
+                        self.player.controls["up"] = True
+                        self.player.jumping = 0
+                    elif event.key in {pygame.K_DOWN, pygame.K_s}:
+                        self.player.controls["down"] = True
+                    elif event.key in {pygame.K_LEFT, pygame.K_a}:
+                        self.player.controls["left"] = True
+                    elif event.key in {pygame.K_RIGHT, pygame.K_d}:
+                        self.player.controls["right"] = True
+                elif event.type == pygame.KEYUP:
+                    if event.key in {pygame.K_UP, pygame.K_SPACE, pygame.K_w}:
+                        self.player.release_jump()
+                    elif event.key in {pygame.K_DOWN, pygame.K_s}:
+                        self.player.controls["down"] = False
+                    elif event.key in {pygame.K_LEFT, pygame.K_a}:
+                        self.player.controls["left"] = False
+                    elif event.key in {pygame.K_RIGHT, pygame.K_d}:
+                        self.player.controls["right"] = False
             
             # delta time
             self.dt = (time.time() - self.last_time) * 60
