@@ -1,18 +1,11 @@
 import pygame, sys, time, math, json
 from src.util import *
+from src.bip import *
 
 # window dimensions
 SCR_WIDTH = 2100
 SCR_HEIGHT = 1200
-SCALE = 4 # screen scaling
-
-# tile size
-TILE_SIZE = 16
-# world is split into chunks (size = relative tilesize, actual pixel size = tile_size * chunk_size)
-CHUNK_SIZE = 9
-# level width (relative chunk size, "")
-LEVEL_WIDTH = 40
-LEVEL_HEIGHT = 40
+SCALE = 3 # screen scaling
 
 # json map path
 MAP = "data/maps/0.json"

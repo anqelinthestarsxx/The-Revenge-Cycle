@@ -1,4 +1,5 @@
 import pygame
+from .bip import *
 
 class Player:
     def __init__(self, app, dimensions, start_pos):
@@ -21,11 +22,11 @@ class Player:
         self.movement = pygame.Vector2(0, 0)
 
         # player stats ig
-        self.speed = 1.5
+        self.speed = 0.7
         self.jump_height = 9 # number of frames we can jump for
-        self.jump_strength = 4 # value of movement.y each frame during jump
-        self.gravity = 0.4
-        self.friction = 0.65
+        self.jump_strength = 3 # value of movement.y each frame during jump
+        self.gravity = 0.3
+        self.friction = 0.7
         self.collisions = {"right": False, "left": False, "up": False, "down": False} # useful to keep track of
 
         self.dead = False # are we dead :)
@@ -48,6 +49,7 @@ class Player:
 
         # first do x-axis movement
         self.pos.x += fm.x
+        self.pos.x = max(0, min(TILE_SIZE * CHUNK_SIZE * LEVEL_WIDTH - self.dimensions.x, self.pos.x))
         r = self.get_rect()
         for rect in self.app.tile_map.physics_rects_around(r.center):
             if r.colliderect(rect):

@@ -42,6 +42,9 @@ class App:
         self.screen_shake = 0
 
         self.player = Player(self, [10, 16], [20, 10])
+
+        self.ls_scale = 1
+        self.level_surf = pygame.Surface((TILE_SIZE * CHUNK_SIZE * LEVEL_WIDTH, TILE_SIZE * CHUNK_SIZE * LEVEL_HEIGHT))
     
     def reset(self):
         self.screen_shake = 0
@@ -87,17 +90,7 @@ class App:
 
         # render to screen
         self.screen.fill((0, 0, 0))
-
-        # calculate camera scroll
-        lookahead = 10
-        if self.player.flip:
-            lookahead *= -1
-        target_scroll = [self.player.get_rect().centerx + lookahead - self.screen.get_width() * 0.5, self.player.get_rect().centery - self.screen.get_height() * 0.5]
-        
-        if abs(target_scroll[0] - self.scroll[0]) > SCROLL_LIMIT:
-            self.scroll[0] += (target_scroll[0] - self.scroll[0]) / 30 * self.dt
-        if abs(target_scroll[1] - self.scroll[0]) > SCROLL_LIMIT:
-            self.scroll[1] += (target_scroll[1] - self.scroll[1]) / 30 * self.dt
+        self.level_surf.fill((0, 0, 0))
 
         screen_shake_offset = (
             (random.random() - 0.5) * self.screen_shake,
@@ -107,9 +100,11 @@ class App:
         render_scroll = (int(self.scroll[0] + screen_shake_offset[0]), int(self.scroll[1] + screen_shake_offset[1]))
         self.screen_shake = max(0, self.screen_shake - SCREEN_SHAKE_DECAY * self.dt)
 
-        self.tile_map.draw(self.screen, render_scroll)
-        self.player.draw(self.screen, render_scroll)
-    
+        self.tile_map.draw(self.level_surf, render_scroll)
+        self.player.draw(self.level_surf, render_scroll)
+
+        self.screen.blit(pygame.transform.scale(self.level_surf, (self.level_surf.get_width() * self.ls_scale, self.level_surf.get_height() * self.ls_scale)), (self.screen.get_width() // 2 - (self.level_surf.get_width() * self.ls_scale * 0.5), self.screen.get_height() // 2 - (self.level_surf.get_height() * self.ls_scale * 0.5)))
+
     def run(self):
         while True:
             for event in pygame.event.get():
@@ -118,11 +113,18 @@ class App:
                     return
                 elif event.type == pygame.VIDEORESIZE:
                     width, height = event.size
+                    width = max(width, WIDTH)
+                    height = max(height, HEIGHT)
                     self.ctx.viewport = (0, 0, width, height)
                     self.display = pygame.display.set_mode((width, height), flags=pygame.RESIZABLE | pygame.OPENGL | pygame.DOUBLEBUF)
                     self.screen = pygame.Surface((width // SCALE, height // SCALE))
                     self.screenTex.release()
                     self.setup_framebuffer()
+
+                    xscale = self.screen.get_width() / self.level_surf.get_width()
+                    yscale = self.screen.get_height() / self.level_surf.get_height()
+                    self.ls_scale = math.floor(min(xscale, yscale))
+
                 elif event.type == pygame.KEYDOWN:
                     if event.key in {pygame.K_UP, pygame.K_SPACE, pygame.K_w}:
                         self.player.controls["up"] = True
