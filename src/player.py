@@ -55,8 +55,10 @@ class Shotgun:
                 kill = True
             else:
                 for enemy in self.app.enemies:
-                    if enemy.get_rect().collidepoint(bullet[0][0], bullet[0][1]):
+                    if enemy.get_rect().collidepoint(bullet[0][0], bullet[0][1]) and not enemy.dead:
                         kill = True
+                        force = 2
+                        enemy.die(pygame.Vector2(math.cos(bullet[1]) * speed * force, math.sin(bullet[1]) * speed * force))
 
             bullet[2] += self.app.dt
             if bullet[2] > 240:

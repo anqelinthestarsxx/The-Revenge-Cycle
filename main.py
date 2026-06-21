@@ -54,7 +54,8 @@ class App:
                 "knife": load_image("player/knife.png"),
                 "shotgun": load_image("player/shotgun.png"),
                 "bullet": load_image("player/bullet.png")
-            }
+            },
+            "placeholder": load_image("placeholder.png")
         }
 
         self.tile_map = TileMap(self)
@@ -149,10 +150,9 @@ class App:
         render_scroll = (int(self.scroll[0] + screen_shake_offset[0]), int(self.scroll[1] + screen_shake_offset[1]))
         self.screen_shake = max(0, self.screen_shake - SCREEN_SHAKE_DECAY * self.dt)
 
-
+        self.tile_map.draw(self.level_surf, render_scroll)
         for enemy in self.enemies:
             enemy.draw(self.level_surf, render_scroll)
-        self.tile_map.draw(self.level_surf, render_scroll)
         self.player.draw(self.level_surf, render_scroll)
 
         level_size = (self.level_surf.get_width() * self.ls_scale, self.level_surf.get_height() * self.ls_scale)
