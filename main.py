@@ -51,7 +51,8 @@ class App:
                     "jump": load_animation("player/white/jump.png", 15, 31, 2),
                     "land": load_animation("player/white/land.png", 16, 31, 3)
                 },
-                "knife": load_image("player/knife.png")
+                "knife": load_image("player/knife.png"),
+                "shotgun": load_image("player/shotgun.png")
             }
         }
 
@@ -150,6 +151,7 @@ class App:
 
         for enemy in self.enemies:
             enemy.draw(self.level_surf, render_scroll)
+        self.tile_map.draw(self.level_surf, render_scroll)
         self.player.draw(self.level_surf, render_scroll)
 
         level_size = (self.level_surf.get_width() * self.ls_scale, self.level_surf.get_height() * self.ls_scale)
@@ -157,6 +159,22 @@ class App:
             self.screen.get_width() * 0.5 - level_size[0] * 0.5,
             self.screen.get_height() * 0.5 - level_size[1] * 0.5,
         )
+        if self.player.mode == "shotgun" and pygame.mouse.get_focused():
+            # get shotgun screen space position
+            ss_pos = pygame.Vector2(self.player.shotgun.pos.x + self.player.shotgun.offset[0], self.player.shotgun.pos.y + self.player.shotgun.offset[1])
+
+            mouse_pos = pygame.Vector2(pygame.mouse.get_pos())
+            mouse_pos /= SCALE
+            mouse_pos -= self.level_surf_pos
+            mouse_pos /= self.ls_scale
+            d = mouse_pos- ss_pos
+            self.player.shotgun.angle = math.atan2(-d.y, d.x) - math.pi * 0.5
+            self.player.shotgun.flipped = mouse_pos.x > self.player.get_rect().centerx
+            self.player.flip = not self.player.shotgun.flipped
+        else:
+            self.player.shotgun.angle += (math.pi * 0.5 * (int(self.player.flip) * 2 - 1) - self.player.shotgun.angle) * 0.3 * self.dt
+            self.player.shotgun.flipped = not self.player.flip
+        
         self.screen.blit(pygame.transform.scale(self.level_surf, level_size), self.level_surf_pos)
 
         self.level_surf.fill((0, 0, 0))
@@ -215,9 +233,10 @@ class App:
                     elif event.key in {pygame.K_RIGHT, pygame.K_d}:
                         self.player.controls["right"] = True
                     elif event.key in {pygame.K_x}:
-                        if self.player.sword.attacked > 10:
-                            self.player.sword.attack()
-                        self.player.sword.update()
+                        if self.player.mode == "sword":
+                            if self.player.sword.attacked > 10:
+                                self.player.sword.attack()
+                            self.player.sword.update()
                 elif event.type == pygame.KEYUP:
                     if event.key in {pygame.K_UP, pygame.K_SPACE, pygame.K_w}:
                         self.player.release_jump()

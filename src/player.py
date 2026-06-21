@@ -1,7 +1,33 @@
 import pygame, math
 
 from .anim import Anim
+from .util import draw_arc
 from .bip import *
+
+class Shotgun:
+    def __init__(self, img, app, target, offset):
+        self.img = img.copy()
+        self.app = app
+        self.pos = pygame.Vector2(target.get_rect().center)
+        self.offset = offset
+
+        self.angle = 0
+        self.rebound = 0
+        self.reboud_vel = 0
+        self.flipped = False
+        self.target = target
+    
+    def update(self):
+        if self.target:
+            self.pos = pygame.Vector2(self.target.get_rect().center)
+    
+    def draw(self, surf, scroll):
+        offset = list(self.offset)
+        if not self.flipped:
+            offset[0] -= 4
+        img_copy = pygame.transform.rotate(pygame.transform.flip(self.img, not self.flipped, False), math.degrees(self.angle))
+        surf.blit(img_copy, (self.pos[0] + int(self.img.get_width() / 2) - int(img_copy.get_width() / 2) - scroll[0] + offset[0], self.pos[1] + int(self.img.get_height() / 2) - int(img_copy.get_height() / 2) - scroll[1] + offset[1]))
+        
 
 class Sword:
     def __init__(self, img, app, pos, target=None, offset=(0, 0)):
@@ -26,6 +52,9 @@ class Sword:
         self.attack_surf = pygame.Surface((32, 32))
         self.attack_mask = pygame.mask.from_surface(self.attack_surf)
         self.attack_offset = (0, 0)
+
+        self.arc_end = self.angle
+        self.arc_start = 0
     
     def attack(self):
         #self.app.world.window.camera.screen_shake = max(self.app.world.window.camera.screen_shake, 1)
@@ -84,6 +113,16 @@ class Sword:
             self.pos[1] += math.sin(-self.angle) * self.arm_length
         self.angle_offset = 90 + (self.target_turn - 90) * self.angle / self.target_dir
         self.swing_vel += (self.swing_vel * self.damp - self.swing_vel) * self.app.dt
+
+        self.arc_end = self.angle
+        if self.target_dir == -math.pi * 0.25:
+            self.arc_start = math.pi * 0.75
+        else:
+            self.arc_start = -math.pi * 0.25
+    
+    def draw_slash(self, surf, scroll):
+        if self.attacking:
+            draw_arc(surf, (255, 255, 255), self.target.get_rect().center, self.arm_length + self.img.get_height(), self.arc_end * (int(not self.flipped) * 2 - 1), self.arc_start * (int(not self.flipped) * 2 - 1), 3, 20)
     
     def draw(self, surf, scroll):
         img_copy = pygame.transform.rotate(self.img, math.degrees(self.angle) - 90 + self.angle_offset)
@@ -146,6 +185,8 @@ class Player:
         self.build_animation(color)
 
         self.sword = Sword(self.app.assets["player"]["knife"], app, self.pos, self, offset=(0, -5))
+        self.shotgun = Shotgun(self.app.assets["player"]["shotgun"], app, self, (0, -10))
+        self.mode = "shotgun"
     
     def build_animation(self, color):
         self.color = color
@@ -235,7 +276,10 @@ class Player:
             if self.controls["up"]:
                 self.movement.y = -self.jump_strength 
 
-        self.sword.update()
+        if self.mode == "sword":
+            self.sword.update()
+        elif self.mode == "shotgun":
+            self.shotgun.update()
     
     def release_jump(self):
         self.controls["up"] = False
@@ -270,9 +314,14 @@ class Player:
         anim = self.handle_animation(self.app.dt)
         anim.flip = self.flip
         # pygame.draw.rect(surf, (255, 0, 0), (self.pos.x - scroll[0], self.pos.y - scroll[1], self.dimensions.x, self.dimensions.y))
-        if self.sword.target_dir == -math.pi * 0.25:
-            self.sword.draw(surf, scroll)
-            anim.draw(surf, scroll, (self.pos.x, self.pos.y))
-            return
-        anim.draw(surf, scroll, self.pos)
-        self.sword.draw(surf, scroll)
+        if self.mode == "sword":
+            if self.sword.target_dir == -math.pi * 0.25:
+                self.sword.draw(surf, scroll)
+                anim.draw(surf, scroll, (self.pos.x, self.pos.y))
+            else:
+                anim.draw(surf, scroll, self.pos)
+                self.sword.draw(surf, scroll)
+        else:
+            anim.draw(surf, scroll, self.pos)
+            self.shotgun.draw(surf, scroll)
+        # self.sword.draw_slash(surf, scroll)

@@ -49,16 +49,14 @@ void main() {
   lightUV = clamp(lightUV, minUV, maxUV);
 
   vec3 light = vec3(1.0);
-  float tile = 0.0;
   if (grey > 0.0) {
     light = texture(lightTex, lightUV - texelSize * 8.0).rgb;
   }
-  if (tileTex.r + tileTex.b + tileTex.g > 0.01 ||
-      (levelMax.y - scrUV.y) / (levelMax.y - levelMin.y) < 0.1) {
-    tile = 1.0;
+  if (!(tileTex.r + tileTex.b + tileTex.g > 0.01 ||
+        (levelMax.y - scrUV.y) / (levelMax.y - levelMin.y) < 0.1)) {
+    light = vec3(1.0);
   }
 
-  vec3 diffuse =
-      mix(tint, tex.rgb * (1.0 - tile) + tileTex.rgb * tile * light, 1.0);
+  vec3 diffuse = mix(tint, tex.rgb * light, 1.0);
   FragColor = vec4(diffuse, 1.0);
 }

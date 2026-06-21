@@ -1,5 +1,5 @@
 # Created by Jens Kromdijk 29/03/2026
-import pygame, os, json, sys
+import pygame, os, json, sys, math
 from pathlib import Path
 
 BASE_IMG_PATH = "data/images/"
@@ -88,3 +88,52 @@ def load_palette(img: pygame.Surface):
             if c != (0, 0, 0, 0) and c != (0, 0, 0, 255):
                 palette.append(tuple(c))
     return palette
+
+def get_circumcenter(a: pygame.Vector2, b: pygame.Vector2, c: pygame.Vector2):
+    d = 2 * (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y))    
+    u = pygame.Vector2(0, 0)
+    u.x = ((a.x * a.x + a.y * a.y) * (b.y - c.y) + (b.x * b.x + b.y * b.y) * (c.y - a.y) + (c.x * c.x + c.y * c.y) * (a.y - b.y)) / d
+    u.y = ((a.x * a.x + a.y * a.y) * (c.x - b.x) + (b.x * b.x + b.y * b.y) * (a.x - c.x) + (c.x * c.x + c.y * c.y) * (b.x - a.x)) / d
+    return u
+
+def draw_arc(surf, color, pos, radius, start_angle, end_angle, bulge, subdivisions=10, width=0):
+    pos = pygame.Vector2(pos)
+    if end_angle < start_angle:
+        end_angle += 2 * math.pi
+    mid_angle = (start_angle + end_angle) * 0.5
+    start_pos = pygame.Vector2(pos.x + math.cos(start_angle) * radius, pos.y + math.sin(start_angle) * radius)
+    end_pos = pygame.Vector2(pos.x + math.cos(end_angle) * radius, pos.y + math.sin(end_angle) * radius)
+    
+    bulge_pos = pygame.Vector2(pos.x + math.cos(mid_angle) * (radius + bulge), pos.y + math.sin(mid_angle) * (radius + bulge))
+
+    cc = get_circumcenter(start_pos, end_pos, bulge_pos)
+    cc_radius = cc.distance_to(bulge_pos)
+
+    cc_start_angle = math.atan2(start_pos.y - cc.y, start_pos.x - cc.x)
+    cc_end_angle = math.atan2(end_pos.y - cc.y, end_pos.x - cc.x)
+
+    if cc_end_angle < cc_start_angle:
+        cc_end_angle += 2 * math.pi
+    
+    cc_mid_angle = math.atan2(bulge_pos.y - cc.y, bulge_pos.x - cc.x)
+    if cc_mid_angle < cc_start_angle:
+        cc_mid_angle += 2 * math.pi
+    
+    if not (cc_start_angle <= cc_mid_angle <= cc_end_angle):
+        cc_start_angle, cc_end_angle = cc_end_angle, cc_start_angle + 2 * math.pi
+
+    # generate the points
+    points = []
+    num_points = subdivisions // 2
+    for i in range(num_points + 1):
+        points.append(pygame.Vector2(
+            pos.x + radius * math.cos(start_angle + i / num_points * (end_angle - start_angle)),
+            pos.y + radius * math.sin(start_angle + i / num_points * (end_angle - start_angle))
+        ))
+    for i in range(num_points + 1):
+        points.append(pygame.Vector2(
+            cc.x + cc_radius * math.cos(cc_end_angle - i / num_points * (cc_end_angle - cc_start_angle)),
+            cc.y + cc_radius * math.sin(cc_end_angle - i / num_points * (cc_end_angle - cc_start_angle))
+        ))
+    
+    pygame.draw.polygon(surf, color, points, width)
