@@ -57,7 +57,7 @@ class Shotgun:
                 for enemy in self.app.enemies:
                     if enemy.get_rect().collidepoint(bullet[0][0], bullet[0][1]) and not enemy.dead:
                         kill = True
-                        force = 2
+                        force = 4
                         enemy.die(pygame.Vector2(math.cos(bullet[1]) * speed * force, math.sin(bullet[1]) * speed * force), pygame.Vector2(bullet[0]))
 
             bullet[2] += self.app.dt
@@ -236,7 +236,7 @@ class Player:
 
         self.sword = Sword(self.app.assets["player"]["knife"], app, self.pos, self, offset=(0, -5))
         self.shotgun = Shotgun(self.app.assets["player"]["shotgun"], app, self, (0, -10))
-        self.mode = "sword"
+        self.mode = "shotgun"
 
     def get_attack_rect(self):
         return pygame.Rect(self.get_rect().centerx - 15 * int(self.flip), self.pos.y + 10, 15, self.dimensions.y - 10)

@@ -2,7 +2,7 @@ import pygame, math
 
 from .bip import *
 
-BOUNCE = 0.5
+BOUNCE = 0.8
 FRICTION = 0.999
 
 class Enemy:
@@ -89,10 +89,10 @@ class Enemy:
 
                         if abs(nx) > abs(ny):
                             p['oldx'] = p['x'] + vx * BOUNCE
-                            p['oldy'] = p['y'] - vy * 0.97
+                            p['oldy'] = p['y'] - vy * FRICTION
                         else:
                             p['oldy'] = p['y'] + vy * BOUNCE
-                            p['oldx'] = p['x'] - vx * 0.97
+                            p['oldx'] = p['x'] - vx * FRICTION
 
         else:
             self.falling += dt
