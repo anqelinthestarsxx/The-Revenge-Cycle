@@ -50,7 +50,8 @@ class App:
                     "run": load_animation("player/white/walk.png", 15, 31, 4),
                     "jump": load_animation("player/white/jump.png", 15, 31, 2),
                     "land": load_animation("player/white/land.png", 16, 31, 3)
-                }
+                },
+                "knife": load_image("player/knife.png")
             }
         }
 
@@ -62,14 +63,13 @@ class App:
         for loc in self.tile_map.tile_map.copy():
             if self.tile_map.tile_map[loc]["type"] == "enemy":
                 tile = self.tile_map.tile_map[loc]
-                print(tile)
                 self.enemies.append(Enemy(self, [15, 31], [self.tile_map.tile_map[loc]["pos"][0] * TILE_SIZE, self.tile_map.tile_map[loc]["pos"][1] * TILE_SIZE - 100]))
                 del self.tile_map.tile_map[loc]
 
         self.scroll = pygame.Vector2(0, 0)
         self.screen_shake = 0
 
-        self.player = Player(self, [15, 31], [20, 10], "white")
+        self.player = Player(self, [15, 31], [20, 10], "black")
 
     
     def reset(self):
@@ -214,6 +214,10 @@ class App:
                         self.player.controls["left"] = True
                     elif event.key in {pygame.K_RIGHT, pygame.K_d}:
                         self.player.controls["right"] = True
+                    elif event.key in {pygame.K_x}:
+                        if self.player.sword.attacked > 10:
+                            self.player.sword.attack()
+                        self.player.sword.update()
                 elif event.type == pygame.KEYUP:
                     if event.key in {pygame.K_UP, pygame.K_SPACE, pygame.K_w}:
                         self.player.release_jump()
