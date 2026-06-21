@@ -13,20 +13,67 @@ class Shotgun:
 
         self.angle = 0
         self.rebound = 0
-        self.reboud_vel = 0
+        self.rebound_vel = 0
         self.flipped = False
         self.target = target
+
+        self.bullets = []
+    
+        self.timer = 1234
+        self.cooldown = 10
+    
+    def shoot(self):
+        if self.timer <= self.cooldown:
+            return
+        self.timer = 0
+        offset = list(self.offset)
+        if not self.flipped:
+            offset[0] -= 4
+        angle = -float(self.angle + math.pi * 0.5)
+        self.bullets.append([[self.target.get_rect().centerx - offset[0] + math.cos(angle) * self.img.get_height() / 2, self.target.get_rect().centery + 4 + math.sin(angle) * self.img.get_height() / 2], angle, 0])
+        self.rebound = -5
+        self.target.movement += pygame.Vector2(self.rebound * math.cos(angle), self.rebound * math.sin(angle)) * 0.2
     
     def update(self):
+        self.timer += self.app.dt
         if self.target:
             self.pos = pygame.Vector2(self.target.get_rect().center)
+        
+        self.rebound_vel += (0 - self.rebound) * 0.3 * self.app.dt
+        self.rebound += self.rebound_vel * self.app.dt
+        self.rebound_vel *= 0.3 ** self.app.dt
     
     def draw(self, surf, scroll):
+        speed = 5
+        bullet_img = self.app.assets["player"]["bullet"]
+        for bullet in self.bullets.copy():
+            kill = False
+            bullet[0][0] += math.cos(bullet[1]) * speed
+            bullet[0][1] += math.sin(bullet[1]) * speed
+
+            if self.app.tile_map.solid_check(bullet[0]):
+                kill = True
+            else:
+                for enemy in self.app.enemies:
+                    if enemy.get_rect().collidepoint(bullet[0][0], bullet[0][1]):
+                        kill = True
+
+            bullet[2] += self.app.dt
+            if bullet[2] > 240:
+                kill = True
+            
+            if kill:
+                self.bullets.remove(bullet)
+            else:
+                img_copy = pygame.transform.rotate(bullet_img, math.degrees(bullet[1]))
+                surf.blit(bullet_img, (bullet[0][0] + int(bullet_img.get_width() / 2) - int(img_copy.get_width() / 2) - scroll[0], bullet[0][1] + int(bullet_img.get_height() / 2) - int(img_copy.get_height() / 2) - scroll[1])) 
+                
         offset = list(self.offset)
         if not self.flipped:
             offset[0] -= 4
         img_copy = pygame.transform.rotate(pygame.transform.flip(self.img, not self.flipped, False), math.degrees(self.angle))
-        surf.blit(img_copy, (self.pos[0] + int(self.img.get_width() / 2) - int(img_copy.get_width() / 2) - scroll[0] + offset[0], self.pos[1] + int(self.img.get_height() / 2) - int(img_copy.get_height() / 2) - scroll[1] + offset[1]))
+        angle = -float(self.angle + math.pi * 0.5)
+        surf.blit(img_copy, (self.pos[0] + int(self.img.get_width() / 2) - int(img_copy.get_width() / 2) - scroll[0] + offset[0] + math.cos(angle) * self.rebound, self.pos[1] + int(self.img.get_height() / 2) - int(img_copy.get_height() / 2) - scroll[1] + offset[1] + math.sin(angle) * self.rebound))
         
 
 class Sword:

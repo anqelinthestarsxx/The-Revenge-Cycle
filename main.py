@@ -52,7 +52,8 @@ class App:
                     "land": load_animation("player/white/land.png", 16, 31, 3)
                 },
                 "knife": load_image("player/knife.png"),
-                "shotgun": load_image("player/shotgun.png")
+                "shotgun": load_image("player/shotgun.png"),
+                "bullet": load_image("player/bullet.png")
             }
         }
 
@@ -237,6 +238,8 @@ class App:
                             if self.player.sword.attacked > 10:
                                 self.player.sword.attack()
                             self.player.sword.update()
+                        elif self.player.mode == "shotgun":
+                            self.player.shotgun.shoot()
                 elif event.type == pygame.KEYUP:
                     if event.key in {pygame.K_UP, pygame.K_SPACE, pygame.K_w}:
                         self.player.release_jump()
