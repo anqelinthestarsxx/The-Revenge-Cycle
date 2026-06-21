@@ -37,7 +37,20 @@ class App:
         self.last_time = time.time() - 1/60
 
         self.assets = {
-            'tiles/grass': load_tile_imgs('tiles/grass.png', 16)
+            'tiles/grass': load_tile_imgs('tiles/grass.png', 16),
+            'player': {
+                "black": {
+                    "idle": load_animation("player/black/idle.png", 15, 31, 4),
+                    "run": load_animation("player/black/walk.png", 15, 31, 4),
+                    "jump": load_animation("player/black/jump.png", 15, 31, 2),
+                    "land": load_animation("player/black/land.png", 16, 31, 3)
+                },
+                "white": {
+                    "idle": load_animation("player/white/idle.png", 32, 32, 4),
+                    "run": load_animation("player/white/walk.png", 32, 32, 4),
+                    "jump": load_animation("player/white/jump.png", 32, 32, 5)
+                }
+            }
         }
 
         self.tile_map = TileMap(self)
@@ -49,13 +62,13 @@ class App:
             if self.tile_map.tile_map[loc]["type"] == "enemy":
                 tile = self.tile_map.tile_map[loc]
                 print(tile)
-                self.enemies.append(Enemy(self, [16, 32], [self.tile_map.tile_map[loc]["pos"][0] * TILE_SIZE, self.tile_map.tile_map[loc]["pos"][1] * TILE_SIZE]))
+                self.enemies.append(Enemy(self, [15, 31], [self.tile_map.tile_map[loc]["pos"][0] * TILE_SIZE, self.tile_map.tile_map[loc]["pos"][1] * TILE_SIZE - 100]))
                 del self.tile_map.tile_map[loc]
 
         self.scroll = pygame.Vector2(0, 0)
         self.screen_shake = 0
 
-        self.player = Player(self, [16, 32], [20, 10])
+        self.player = Player(self, [15, 31], [20, 10])
 
     
     def reset(self):
@@ -181,9 +194,10 @@ class App:
                     self.lightTex.release()
                     self.tileTex.release()
 
-                    xscale = self.screen.get_width() / self.level_surf.get_width() * 2
-                    yscale = self.screen.get_height() / self.level_surf.get_height() * 2
-                    self.ls_scale = math.floor(min(xscale, yscale)) / 2
+                    resolution = 1
+                    xscale = self.screen.get_width() / self.level_surf.get_width() * resolution
+                    yscale = self.screen.get_height() / self.level_surf.get_height() * resolution
+                    self.ls_scale = math.floor(min(xscale, yscale)) / resolution
                     self.level_surf_pos = pygame.Vector2(0, 0)
                     self.setup_framebuffer()
 

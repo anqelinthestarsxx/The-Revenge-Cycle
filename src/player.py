@@ -1,8 +1,10 @@
 import pygame
+
+from .anim import Anim
 from .bip import *
 
 class Player:
-    def __init__(self, app, dimensions, start_pos):
+    def __init__(self, app, dimensions, start_pos, color="black"):
         self.app = app # to access tile map and particle managers
         # for collisions
         self.dimensions = pygame.Vector2(dimensions)
@@ -33,6 +35,15 @@ class Player:
 
         # for the animations
         self.flip = False
+
+        self.build_animation(color)
+    
+    def build_animation(self, color):
+        self.color = color
+        self.idle = Anim(self.app.assets["player"][self.color]["idle"], 0.1)
+        self.run = Anim(self.app.assets["player"][self.color]["run"], 0.2)
+        self.jump = Anim(self.app.assets["player"][self.color]["jump"], 0.1, False)
+        self.land = Anim(self.app.assets["player"][self.color]["land"], 0.2, False)
 
     def get_rect(self):
         return pygame.Rect(self.pos.x, self.pos.y, self.dimensions.x, self.dimensions.y)
@@ -120,6 +131,31 @@ class Player:
         if self.jumping < self.jump_height:
             self.movement.y *= 0.65
         self.jumping = self.jump_height + 1
+    
+    def handle_animation(self, dt):
+        if self.falling > 3:
+            self.jump.update(dt)
+            self.idle.reset()
+            self.run.reset()
+            self.land.reset()
+            return self.jump
+        if self.controls["left"] or self.controls["right"]:
+            self.run.update(dt)
+            self.idle.reset()
+            self.jump.reset()
+            self.land.frame = 23434
+            self.land.finished = True
+            return self.run
+        if not self.land.finished:
+            self.land.update(dt)
+            return self.land
+        self.idle.update(dt)
+        self.run.reset()
+        self.jump.reset()
+        return self.idle
 
     def draw(self, surf, scroll):
-        pygame.draw.rect(surf, (255, 0, 0), (self.pos.x - scroll[0], self.pos.y - scroll[1], self.dimensions.x, self.dimensions.y))
+        anim = self.handle_animation(self.app.dt)
+        anim.flip = self.flip
+        # pygame.draw.rect(surf, (255, 0, 0), (self.pos.x - scroll[0], self.pos.y - scroll[1], self.dimensions.x, self.dimensions.y))
+        anim.draw(surf, scroll, (self.pos.x, self.pos.y))
