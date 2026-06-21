@@ -181,9 +181,9 @@ class App:
                     self.lightTex.release()
                     self.tileTex.release()
 
-                    xscale = self.screen.get_width() / self.level_surf.get_width()
-                    yscale = self.screen.get_height() / self.level_surf.get_height()
-                    self.ls_scale = math.floor(min(xscale, yscale))
+                    xscale = self.screen.get_width() / self.level_surf.get_width() * 2
+                    yscale = self.screen.get_height() / self.level_surf.get_height() * 2
+                    self.ls_scale = math.floor(min(xscale, yscale)) / 2
                     self.level_surf_pos = pygame.Vector2(0, 0)
                     self.setup_framebuffer()
 
