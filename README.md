@@ -30,3 +30,24 @@
  - Trees
  - Grass
  - Clouds
+
+# Monday:
+ - different weapons (chilli powder, bare fists)
+ - NPC behaviour (panic, fighting, chilling)
+
+# Tuesday:
+ - VFX + Gore
+
+# Wednesday
+ - Finish VFX
+ - Actual levels + UI
+ - SFX
+
+# Thursday
+ - Death messages
+ - Finish SFX and make soundtrack
+ - Boss fight level if time
+
+# Friday
+ - Finishing touches
+ - Build for Windows and playtest
