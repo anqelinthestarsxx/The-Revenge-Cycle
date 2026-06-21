@@ -46,9 +46,10 @@ class App:
                     "land": load_animation("player/black/land.png", 16, 31, 3)
                 },
                 "white": {
-                    "idle": load_animation("player/white/idle.png", 32, 32, 4),
-                    "run": load_animation("player/white/walk.png", 32, 32, 4),
-                    "jump": load_animation("player/white/jump.png", 32, 32, 5)
+                    "idle": load_animation("player/white/idle.png", 15, 31, 4),
+                    "run": load_animation("player/white/walk.png", 15, 31, 4),
+                    "jump": load_animation("player/white/jump.png", 15, 31, 2),
+                    "land": load_animation("player/white/land.png", 16, 31, 3)
                 }
             }
         }
@@ -68,7 +69,7 @@ class App:
         self.scroll = pygame.Vector2(0, 0)
         self.screen_shake = 0
 
-        self.player = Player(self, [15, 31], [20, 10])
+        self.player = Player(self, [15, 31], [20, 10], "white")
 
     
     def reset(self):
