@@ -18,7 +18,7 @@ class Sword:
         self.swing_vel = 0
         self.slash = None
         self.arm_length = 5
-        self.attacked = 10
+        self.attacked = 1000
         self.target_turn = 180
         self.flipped = False
         self.target_dir = 1 * math.pi
@@ -93,6 +93,8 @@ class Sword:
             img_copy = pygame.transform.flip(img_copy, True, False)
             self.flipped = True
             offset[0] -= 3
+        alpha = max(0, min(255, 255 - (self.attacked - 30)))
+        img_copy.set_alpha(alpha)
         surf.blit(img_copy, (self.pos[0] + int(self.img.get_width() / 2) - int(img_copy.get_width() / 2) - scroll[0] + offset[0], self.pos[1] + int(self.img.get_height() / 2) - int(img_copy.get_height() / 2) - scroll[1] + offset[1]))
         if self.slash:
             self.slash.draw(surf, scroll)
@@ -264,7 +266,7 @@ class Player:
         return self.idle
 
     def draw(self, surf, scroll):
-        self.sword.offset = (-4, -3)
+        self.sword.offset = (-4, -4)
         anim = self.handle_animation(self.app.dt)
         anim.flip = self.flip
         # pygame.draw.rect(surf, (255, 0, 0), (self.pos.x - scroll[0], self.pos.y - scroll[1], self.dimensions.x, self.dimensions.y))
