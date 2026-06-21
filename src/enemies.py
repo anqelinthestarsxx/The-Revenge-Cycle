@@ -30,14 +30,19 @@ class Enemy:
     def get_rect(self):
         return pygame.Rect(self.pos.x, self.pos.y, self.dimensions.x, self.dimensions.y)
     
-    def die(self, impact: pygame.Vector2):
+    def die(self, impact: pygame.Vector2, impact_point: pygame.Vector2):
         if not self.dead:
+            impact = pygame.Vector2(impact)
+            impact_point = pygame.Vector2(impact_point)
             self.dead = True
 
-            p1 = (self.pos.x + self.node_radius, self.pos.y + self.node_radius)
-            self.p1 = {"x": p1[0], "y": p1[1], "oldx": p1[0] - impact.x, "oldy": p1[1] - impact.y}
-            p2 = (self.pos.x + self.node_radius, self.pos.y + self.dimensions.y - self.node_radius)
-            self.p2 = {"x": p2[0], "y": p2[1], "oldx": p2[0] - impact.x, "oldy": p2[1] - impact.y}
+            force = impact.length()
+            p1 = pygame.Vector2(self.pos.x + self.node_radius, self.pos.y + self.node_radius)
+            angle = math.atan2(p1.y - impact_point.y, p1.x - impact_point.x)
+            self.p1 = {"x": p1[0], "y": p1[1], "oldx": p1[0] - math.cos(angle) * force, "oldy": p1[1] - math.sin(angle) * force}
+            p2 = pygame.Vector2(self.pos.x + self.node_radius, self.pos.y + self.dimensions.y - self.node_radius)
+            angle = math.atan2(p2.y - impact_point.y, p2.x - impact_point.x)
+            self.p2 = {"x": p2[0], "y": p2[1], "oldx": p2[0] - math.cos(angle) * force, "oldy": p2[1] - math.sin(angle) * force}
     
     def update(self, dt):
         if self.dead:
@@ -137,6 +142,17 @@ class Enemy:
                 if rect.colliderect(r):
                     self.die(pygame.Vector2(0, 0))
                     return
+            
+            if self.app.player.sword.attacking:
+                
+
+                if self.collide_mask(self.app.player.sword.attack_mask, self.app.player.sword.attack_offset):
+                    self.die(pygame.Vector2(5, 5), self.app.player.get_rect().center)
+    
+    def collide_mask(self, mask, pos):
+        self.hurt_mask = pygame.mask.from_surface(self.img)
+        offset = (pos[0] - self.pos.x, pos[1] - self.pos.y)
+        return self.hurt_mask.overlap(mask, offset)
     
     def draw(self, surf, scroll):
         if not self.dead:

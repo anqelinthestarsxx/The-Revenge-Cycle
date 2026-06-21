@@ -58,7 +58,7 @@ class Shotgun:
                     if enemy.get_rect().collidepoint(bullet[0][0], bullet[0][1]) and not enemy.dead:
                         kill = True
                         force = 2
-                        enemy.die(pygame.Vector2(math.cos(bullet[1]) * speed * force, math.sin(bullet[1]) * speed * force))
+                        enemy.die(pygame.Vector2(math.cos(bullet[1]) * speed * force, math.sin(bullet[1]) * speed * force), pygame.Vector2(bullet[0]))
 
             bullet[2] += self.app.dt
             if bullet[2] > 240:
@@ -98,7 +98,7 @@ class Sword:
         self.flipped = False
         self.target_dir = 1 * math.pi
         self.damp = 0.5
-        self.attack_surf = pygame.Surface((32, 32))
+        self.attack_surf = pygame.Surface((64, 64))
         self.attack_mask = pygame.mask.from_surface(self.attack_surf)
         self.attack_offset = (0, 0)
 
@@ -189,12 +189,13 @@ class Sword:
             if self.slash.animation.finished:
                 self.slash = None
         self.attack_surf.fill((0, 0, 0, 0))
-        if self.attacking and self.slash:
-            self.attack_surf.blit(img_copy, (16 + int(self.img.get_width() / 2) - int(img_copy.get_width() / 2) + offset[0], 16 + int(self.img.get_height() / 2) - int(img_copy.get_height() / 2) + offset[1]))
-            self.attack_surf.blit(self.slash.img, (16 - self.slash.offset[0], 16 - self.slash.offset[1]))
+        if self.attacking:
+            fuzziness = 2
+            for o in {(-1, 0), (1, 0), (0, 1), (0, -1)}:
+                self.attack_surf.blit(img_copy, (32 + int(self.img.get_width() / 2) - int(img_copy.get_width() / 2) + offset[0] + o[0] * fuzziness, 32 + int(self.img.get_height() / 2) - int(img_copy.get_height() / 2) + offset[1] + o[1] * fuzziness))
         self.attack_mask = pygame.mask.from_surface(self.attack_surf)
         self.attack_surf = self.attack_mask.to_surface()
-        self.attack_offset = (self.target.pos.x - 16, self.target.pos.y - 16)
+        self.attack_offset = (self.pos[0] - 32, self.pos[1] - 32)
         return self.attack_mask, self.attack_offset
 
 
@@ -235,7 +236,10 @@ class Player:
 
         self.sword = Sword(self.app.assets["player"]["knife"], app, self.pos, self, offset=(0, -5))
         self.shotgun = Shotgun(self.app.assets["player"]["shotgun"], app, self, (0, -10))
-        self.mode = "shotgun"
+        self.mode = "sword"
+
+    def get_attack_rect(self):
+        return pygame.Rect(self.get_rect().centerx - 15 * int(self.flip), self.pos.y + 10, 15, self.dimensions.y - 10)
     
     def build_animation(self, color):
         self.color = color
@@ -363,8 +367,10 @@ class Player:
         anim = self.handle_animation(self.app.dt)
         anim.flip = self.flip
         # pygame.draw.rect(surf, (255, 0, 0), (self.pos.x - scroll[0], self.pos.y - scroll[1], self.dimensions.x, self.dimensions.y))
+        # if self.sword.attacking:
+        #     pygame.draw.rect(surf, (255, 0, 0), self.get_attack_rect())
         if self.mode == "sword":
-            if self.sword.target_dir == -math.pi * 0.25:
+            if self.sword.angle > 0:
                 self.sword.draw(surf, scroll)
                 anim.draw(surf, scroll, (self.pos.x, self.pos.y))
             else:
