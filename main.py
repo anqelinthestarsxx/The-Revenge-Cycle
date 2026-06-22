@@ -73,7 +73,7 @@ class App:
         self.scroll = pygame.Vector2(0, 0)
         self.screen_shake = 0
 
-        self.player = Player(self, [15, 31], [20, 10], "black")
+        self.player = Player(self, [15, 31], [20, 50], "black")
 
     
     def reset(self):
@@ -242,11 +242,14 @@ class App:
                         elif self.player.mode == "shotgun":
                             self.player.shotgun.shoot()
                         elif self.player.mode == "pepper":
-                            mouse_pos = pygame.Vector2(pygame.mouse.get_pos())
-                            mouse_pos /= SCALE
-                            mouse_pos -= self.level_surf_pos
-                            mouse_pos /= self.ls_scale
-                            self.player.pepper.shoot(mouse_pos)
+                            if pygame.mouse.get_focused():
+                                mouse_pos = pygame.Vector2(pygame.mouse.get_pos())
+                                mouse_pos /= SCALE
+                                mouse_pos -= self.level_surf_pos
+                                mouse_pos /= self.ls_scale
+                                self.player.pepper.shoot(mouse_pos)
+                            else:
+                                self.player.pepper.shoot(pygame.Vector2(self.player.pepper.pos) + pygame.Vector2(300 * -(2 * int(self.player.flip) - 1), -5))
                 elif event.type == pygame.KEYUP:
                     if event.key in {pygame.K_UP, pygame.K_SPACE, pygame.K_w}:
                         self.player.release_jump()

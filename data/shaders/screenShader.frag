@@ -53,7 +53,7 @@ void main() {
     light = texture(lightTex, lightUV - texelSize * 8.0).rgb;
   }
   if (!(tileTex.r + tileTex.b + tileTex.g > 0.01 ||
-        (levelMax.y - scrUV.y) / (levelMax.y - levelMin.y) < 0.1)) {
+        (levelMax.y - scrUV.y) / (levelMax.y - levelMin.y) < 0.3)) {
     light = vec3(1.0);
   }
 

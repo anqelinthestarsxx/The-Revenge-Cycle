@@ -4,12 +4,14 @@ from .anim import Anim
 from .util import draw_arc
 from .bip import *
 
+import pygame.geometry
+
 class Pepper:
     def __init__(self, img, app, target, offset):
         self.img = img.copy()
         self.app = app
         self.pos = pygame.Vector2(target.get_rect().center)
-        self.offset = offset
+        self.offset = list(offset)
 
         self.target = target
 
@@ -18,9 +20,17 @@ class Pepper:
 
         self.peppers = []
 
-        self.gravity = 0.3
+        self.gravity = 0.4
+        self.explode_radius = 16
     
-    def shoot(self, pos, speed=10):
+    def explode(self, pos, vel):
+        self.app.screen_shake = max(self.app.screen_shake, 8)
+        circle = pygame.geometry.Circle(pos[0], pos[1], self.explode_radius)
+        for enemy in self.app.enemies:
+            if circle.colliderect(enemy.get_rect()) and not enemy.dead:
+                enemy.die(pygame.Vector2(vel), pos)
+    
+    def shoot(self, pos, speed=9):
         if self.timer < self.cooldown:
             return
 
@@ -47,6 +57,11 @@ class Pepper:
         if self.target:
             self.pos = pygame.Vector2(self.target.get_rect().center)
 
+            if self.target.flip:
+                self.offset[0] = -9
+            else:
+                self.offset[0] = 1
+
     def draw(self, surf, scroll):
         alpha = min(1, self.timer / self.cooldown) * 255
         self.img.set_alpha(alpha)
@@ -59,8 +74,15 @@ class Pepper:
             p[0][0] += p[1][0] * self.app.dt
             p[0][1] += p[1][1] * self.app.dt
 
+            circle = pygame.geometry.Circle(p[0][0], p[0][1], 2)
+            for enemy in self.app.enemies:
+                if circle.colliderect(enemy.get_rect()) and not enemy.dead:
+                    kill = True
+                    self.explode(p[0], p[1])
+
             if self.app.tile_map.solid_check(p[0]):
                 kill = True
+                self.explode(p[0], p[1])
 
             p[2] += self.app.dt * 5 # make it spin
             p[3] += self.app.dt

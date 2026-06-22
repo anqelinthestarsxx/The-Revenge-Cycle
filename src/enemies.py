@@ -3,7 +3,7 @@ import pygame, math
 from .bip import *
 
 BOUNCE = 0.8
-FRICTION = 0.999
+FRICTION = 0.9
 
 class Enemy:
     def __init__(self, app, dimensions, start_pos):
@@ -36,7 +36,7 @@ class Enemy:
             impact_point = pygame.Vector2(impact_point)
             self.dead = True
 
-            force = impact.length()
+            force = min(impact.length(), 16)
             p1 = pygame.Vector2(self.pos.x + self.node_radius, self.pos.y + self.node_radius)
             angle = math.atan2(p1.y - impact_point.y, p1.x - impact_point.x)
             self.p1 = {"x": p1[0], "y": p1[1], "oldx": p1[0] - math.cos(angle) * force, "oldy": p1[1] - math.sin(angle) * force}
@@ -48,14 +48,14 @@ class Enemy:
         if self.dead:
             vels = []
             for p in [self.p1, self.p2]:
-                vx = (p['x'] - p['oldx']) * FRICTION
-                vy = (p['y'] - p['oldy']) * FRICTION
+                vx = (p['x'] - p['oldx'])
+                vy = (p['y'] - p['oldy'])
                 vels.append((vx, vy))
                 p['oldx'] = p['x']
                 p['oldy'] = p['y']
                 p['x'] += vx * dt
                 p['y'] += vy * dt
-                p['y'] += 0.5 * dt * dt
+                p['y'] += 2 * dt * dt
 
             dx, dy = self.p1['x'] - self.p2['x'], self.p1['y'] - self.p2['y']
             distance = math.sqrt(dx ** 2 + dy ** 2)

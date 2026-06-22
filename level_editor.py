@@ -7,6 +7,9 @@ SCR_WIDTH = 2100
 SCR_HEIGHT = 1200
 SCALE = 3 # screen scaling
 
+LEVEL_WIDTH = 23
+LEVEL_HEIGHT = 23
+
 # json map path
 MAP = "data/maps/0.json"
 
