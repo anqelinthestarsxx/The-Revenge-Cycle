@@ -52,9 +52,9 @@ class Pepper:
             self.app.cinders.append([list(kpos), [math.cos(angle) * speed, math.sin(angle) * speed], random.randint(2, 20), (251, 223, 107)])
         for _ in range(random.randint(20, 30)):
             angle = random.random() * math.pi * 2
-            speed = random.random() * 3
+            speed = random.random() * 3 + 3
             self.app.sparks.append(
-                Spark(list(kpos), angle, speed, random.choice([(237, 82, 89), (196, 44, 54)]))
+                Spark(list(kpos), angle, speed, random.choice([(237, 82, 89), (196, 44, 54)]), scale=1)
             )
         vn = pygame.Vector2(vel).normalize()
         for _ in range(15):
@@ -165,9 +165,17 @@ class Shotgun:
         if not self.flipped:
             offset[0] -= 4
         angle = -float(self.angle + math.pi * 0.5)
-        self.bullets.append([[self.target.get_rect().centerx - offset[0] + math.cos(angle) * self.img.get_height() / 2, self.target.get_rect().centery + 4 + math.sin(angle) * self.img.get_height() / 2], angle, 0])
+        pos = [self.target.get_rect().centerx + math.cos(angle) * self.img.get_height() / 2, self.target.get_rect().centery + 4 + math.sin(angle) * self.img.get_height() / 2]
+        self.bullets.append([list(pos), angle, 0])
         self.rebound = -5
         self.target.movement += pygame.Vector2(self.rebound * math.cos(angle), self.rebound * math.sin(angle)) * 0.2
+
+        for _ in range(random.randint(10, 15)):
+            spread = 1
+            self.app.particles.append(Particle(self.app, "explosion", [pos[0] + 1, pos[1] + 1], [math.cos(angle) * 3, math.sin(angle) * 3], random.random(), False))
+            self.app.particles[-1].speed = 2
+            self.app.particles[-1].decay = 50
+            self.app.sparks.append(Spark([pos[0] + 1, pos[1] + 1], angle, 3, (219, 224, 231)))
     
     def update(self):
         self.timer += self.app.dt
@@ -372,7 +380,7 @@ class Player:
         self.sword = Sword(self.app.assets["player"]["knife"], app, self.pos, self, offset=(0, -5))
         self.shotgun = Shotgun(self.app.assets["player"]["shotgun"], app, self, (0, -10))
         self.pepper = Pepper(self.app.assets["player"]["pepper"], app, self, (0, 0))
-        self.mode = "pepper"
+        self.mode = "shotgun"
 
     def get_attack_rect(self):
         return pygame.Rect(self.get_rect().centerx - 15 * int(self.flip), self.pos.y + 10, 15, self.dimensions.y - 10)

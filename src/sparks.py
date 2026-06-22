@@ -43,28 +43,29 @@ class Spark:
         self.velocity_adjust(0.975, 0, 1, dt)
         # self.angle += 0.1 * dt
 
-        self.speed -= 0.1 * dt
+        self.speed -= 0.2 * dt
 
         return self.speed <= 0
 
     def draw(self, surf, scroll=[0, 0]):
         if not self.spinny:
+            width = 0.1
             points = [
                 [
-                    self.loc[0] - scroll[0] + math.cos(self.angle) * self.speed * self.scale,
-                    self.loc[1] - scroll[1] + math.sin(self.angle) * self.speed * self.scale,
+                    self.loc[0] - scroll[0],
+                    self.loc[1] - scroll[1],
                 ],
                 [
-                    self.loc[0] - scroll[0] + math.cos(self.angle + math.pi / 2) * self.speed * self.scale * 0.5,
-                    self.loc[1] - scroll[1] + math.sin(self.angle + math.pi / 2) * self.speed * self.scale * 0.5,
+                    self.loc[0] - scroll[0] + math.cos(self.angle + math.pi * width) * self.speed * self.scale * 1.5,
+                    self.loc[1] - scroll[1] + math.sin(self.angle + math.pi * width) * self.speed * self.scale * 1.5,
                 ],
                 [
-                    self.loc[0] - scroll[0] - math.cos(self.angle) * self.speed * self.scale * 3.5,
-                    self.loc[1] - scroll[1] - math.sin(self.angle) * self.speed * self.scale * 3.5,
+                    self.loc[0] - scroll[0] + math.cos(self.angle) * self.speed * self.scale * 2,
+                    self.loc[1] - scroll[1] + math.sin(self.angle) * self.speed * self.scale * 2,
                 ],
                 [
-                    self.loc[0] - scroll[0] + math.cos(self.angle - math.pi / 2) * self.speed * self.scale * 0.5,
-                    self.loc[1] - scroll[1] - math.sin(self.angle + math.pi / 2) * self.speed * self.scale * 0.5,
+                    self.loc[0] - scroll[0] + math.cos(self.angle - math.pi * width) * self.speed * self.scale * 1.5,
+                    self.loc[1] - scroll[1] + math.sin(self.angle - math.pi * width) * self.speed * self.scale * 1.5,
                 ],
             ]
         else:
@@ -74,8 +75,8 @@ class Spark:
                     self.loc[1] + math.sin(self.angle + math.sin(self.speed * 20) * math.pi * 0.5) * self.speed * 3 - scroll[1],
                 ),
                 (
-                    self.loc[0] + math.cos(self.angle + math.pi * 0.125) * self.speed * 2 - scroll[0],
-                    self.loc[1] + math.sin(self.angle + math.pi * 0.125) * self.speed * 2 - scroll[1],
+                    self.loc[0] + math.cos(self.angle + math.pi * width) * self.speed * 2 - scroll[0],
+                    self.loc[1] + math.sin(self.angle + math.pi * width) * self.speed * 2 - scroll[1],
                 ),
                 (
                     self.loc[0] + math.cos(self.angle + math.pi * 0.5) * self.speed * 0.5 - scroll[0],
@@ -90,8 +91,8 @@ class Spark:
                     self.loc[1] + math.sin(self.angle - math.pi * 0.5) * self.speed * 0.5 - scroll[1],
                 ),
                 (
-                    self.loc[0] + math.cos(self.angle - math.pi * 0.125) * self.speed * 2 - scroll[0],
-                    self.loc[1] + math.sin(self.angle - math.pi * 0.125) * self.speed * 2 - scroll[1],
+                    self.loc[0] + math.cos(self.angle - math.pi * width) * self.speed * 2 - scroll[0],
+                    self.loc[1] + math.sin(self.angle - math.pi * width) * self.speed * 2 - scroll[1],
                 ),
             ]
         pygame.draw.polygon(surf, self.color, points)

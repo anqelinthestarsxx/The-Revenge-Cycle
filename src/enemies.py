@@ -56,7 +56,7 @@ class Enemy:
                 self.app.kickup.append([list(kpos), [math.cos(angle) * speed, math.sin(angle) * speed * 2], random.random() * 0.05 + 2, random.choice([(237, 82, 89), (196, 44, 54), (120, 31, 44)])])
             for _ in range(random.randint(20, 30)):
                 angle = random.random() * math.pi * 2
-                speed = random.random() * 3
+                speed = random.random() * 3 + 3
                 self.app.sparks.append(
                     Spark(list(kpos), angle, speed, random.choice([(237, 82, 89), (196, 44, 54)]))
                 )
@@ -70,9 +70,13 @@ class Enemy:
                 angle = random.random() * math.pi * 2
                 speed = random.random() * 5
                 self.app.slime.append([pygame.Vector2(kpos) + pygame.Vector2(random.random() * 10 - 5, random.random() * 10 - 5), [math.cos(angle) * speed, math.sin(angle) * speed], random.choice([(237, 82, 89), (196, 44, 54), (120, 31, 44)])])
-            for _ in range(20):
+            angle = random.random() * math.pi * 2
+            vel = random.random() * 2.5 + 7.4
+            self.app.splat.append([pygame.Vector2(kpos), [math.cos(angle) * vel, math.sin(angle) * vel], random.choice([(237, 82, 89), (196, 44, 54), (120, 31, 44)]), 3])
+            self.app.slime.append([pygame.Vector2(kpos) + pygame.Vector2(random.random() * 10 - 5, random.random() * 10 - 5), [math.cos(angle) * speed, math.sin(angle) * speed], random.choice([(237, 82, 89), (196, 44, 54), (120, 31, 44)])])
+            for _ in range(random.randint(50, 60)):
                 angle = random.random() * math.pi * 2
-                vel = random.random() * 10
+                vel = random.random() * 2.5 + 7.4
                 self.app.splat.append([pygame.Vector2(kpos) + pygame.Vector2(random.random() * 10 - 5, random.random() * 10 - 5), [math.cos(angle) * vel, math.sin(angle) * vel], random.choice([(237, 82, 89), (196, 44, 54), (120, 31, 44)]), 3])
             for _ in range(random.randint(30, 50)):
                 angle = math.pi * 2 * random.random()
@@ -81,10 +85,14 @@ class Enemy:
 
     def update(self, dt):
         if self.dead:
+            # print(self.get_dead_midpoint())
+            # print(self.p1, self.p2)
             vels = []
             for p in [self.p1, self.p2]:
                 vx = (p['x'] - p['oldx'])
+                vx = min(16, max(-16, vx))
                 vy = (p['y'] - p['oldy'])
+                vy = min(16, max(-16, vy))
                 vels.append((vx, vy))
                 p['oldx'] = p['x']
                 p['oldy'] = p['y']
@@ -98,6 +106,8 @@ class Enemy:
             percentage = difference / max(0.001, distance) * 0.5
             offset_x = dx * percentage
             offset_y = dy * percentage
+            offset_x = pygame.math.clamp(offset_x, -(self.dimensions.y - self.node_radius * 2), self.dimensions.y - self.node_radius * 2)
+            offset_y = pygame.math.clamp(offset_y, -(self.dimensions.y - self.node_radius * 2), self.dimensions.y - self.node_radius * 2)
             self.p1['x'] += offset_x
             self.p1['y'] += offset_y
             self.p2['x'] -= offset_x
@@ -179,8 +189,6 @@ class Enemy:
                     return
             
             if self.app.player.sword.attacking:
-                
-
                 if self.collide_mask(self.app.player.sword.attack_mask, self.app.player.sword.attack_offset):
                     self.die(pygame.Vector2(5, 5), self.app.player.get_rect().center)
     

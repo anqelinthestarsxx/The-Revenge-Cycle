@@ -356,7 +356,7 @@ class App:
         )
         if self.player.mode == "shotgun" and pygame.mouse.get_focused():
             # get shotgun screen space position
-            ss_pos = pygame.Vector2(self.player.shotgun.pos.x + self.player.shotgun.offset[0], self.player.shotgun.pos.y + self.player.shotgun.offset[1])
+            ss_pos = pygame.Vector2(self.player.get_rect().centerx, self.player.get_rect().centery + 4)
 
             mouse_pos = pygame.Vector2(pygame.mouse.get_pos())
             mouse_pos /= SCALE
