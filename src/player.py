@@ -4,6 +4,7 @@ from .anim import Anim
 from .util import draw_arc
 from .bip import *
 from .particles import *
+from .sparks import *
 
 import pygame.geometry
 
@@ -39,6 +40,34 @@ class Pepper:
             angle = math.pi * 2 * random.random()
             speed = random.random() * 0.5 + 0.25
             self.app.smoke.append([list(pos),[math.cos(angle) * speed, math.sin(angle) * speed], 1, random.randint(200, 255), 0, random.randint(0, 360), random.choice([(163, 172, 190)])])
+        kpos = list(pos)
+        while self.app.tile_map.solid_check(kpos):
+            kpos[1] -= 2
+        for _ in range(random.randint(40, 60)):
+            angle = 2 * math.pi * random.random()
+            speed = random.random() * 4 - 2
+            self.app.kickup.append([list(kpos), [math.cos(angle) * speed, math.sin(angle) * speed * 2], random.random() * 0.05 + 2, random.choice([(80, 155, 75), (237, 82, 89), (196, 44, 54), (120, 31, 44)])])
+        for _ in range(random.randint(50, 60)):
+            angle = random.random() * math.pi * 2
+            speed = random.random() * 5
+            self.app.particles.append(Particle(self.app, 'particle', list(kpos), [math.cos(angle + math.pi) * speed * 0.5, math.sin(angle + math.pi) * speed * 0.5], random.randint(0, 7)))
+            self.app.particles[-1].speed += 0.1
+            self.app.cinders.append([list(kpos), [math.cos(angle) * speed, math.sin(angle) * speed], random.randint(2, 20), (251, 223, 107)])
+        for _ in range(random.randint(20, 30)):
+            angle = random.random() * math.pi * 2
+            speed = random.random() * 3
+            self.app.sparks.append(
+                Spark(list(kpos), angle, speed, random.choice([(237, 82, 89), (196, 44, 54)]))
+            )
+        vn = pygame.Vector2(vel).normalize()
+        for _ in range(15):
+            angle = (random.random() - 0.5) * math.pi
+            speed = random.random() * 3
+            self.app.slime.append([list(kpos), list(vn.rotate_rad(angle) * speed), (20, 16, 32)])
+        for _ in range(20):
+            angle = random.random() * math.pi * 2
+            vel = random.random() * 5 
+            self.app.splat.append([list(kpos), [math.cos(angle) * vel, math.sin(angle) * vel], random.choice([(196, 44, 54), (123, 207, 92)]), 3])
     
     def shoot(self, pos, speed=9):
         if self.timer < self.cooldown:
@@ -87,6 +116,9 @@ class Pepper:
             circle = pygame.geometry.Circle(p[0][0], p[0][1], 2)
             for enemy in self.app.enemies:
                 if circle.colliderect(enemy.get_rect()) and not enemy.dead:
+                    kill = True
+                    self.explode(p[0], p[1])
+                elif enemy.dead and enemy.particle_check(p[0])[0]:
                     kill = True
                     self.explode(p[0], p[1])
 

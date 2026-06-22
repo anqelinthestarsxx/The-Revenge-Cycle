@@ -21,7 +21,7 @@ class Enemy:
         # for the animations
         self.flip = False
 
-        self.img = app.assets["placeholder"]
+        self.img = app.assets["placeholder"].copy()
 
         self.node_radius = self.dimensions.x * 0.5
         self.p1 = {}
@@ -153,19 +153,45 @@ class Enemy:
         self.hurt_mask = pygame.mask.from_surface(self.img)
         offset = (pos[0] - self.pos.x, pos[1] - self.pos.y)
         return self.hurt_mask.overlap(mask, offset)
+
+    def get_dead_midpoint(self):
+        return pygame.Vector2(
+            (self.p1['x'] + self.p2['x']) * 0.5,
+            (self.p1['y'] + self.p2['y']) * 0.5
+        )
+
+    def get_dead_angle(self):
+        angle = math.atan2(self.p1['y'] - self.p2['y'], self.p1['x'] - self.p2['x'])
+        return -math.degrees(angle) - 90
+    
+    def particle_check(self, pos):
+        if not self.dead:
+            return self.get_rect().collidepoint(pos), (pos[0] - self.pos.x, pos[1] - self.pos.y)
+        mp = self.get_dead_midpoint()
+        angle_rad = math.radians(-self.get_dead_angle() + 90)
+        dx = pos[0] - mp.x
+        dy = pos[1] - mp.y
+
+        c = math.cos(-angle_rad)
+        s = math.sin(-angle_rad)
+
+        x = dx * c - dy * s
+        y = dx * s + dy * c
+
+        if -self.img.get_width() / 2 <= x <= self.img.get_width() * 0.5 and -self.img.get_height() * 0.5 <= y <= self.img.get_height() * 0.5:
+            return True, (x + self.img.get_width() * 0.5, y + self.img.get_height() * 0.5)
+        return False, None
     
     def draw(self, surf, scroll):
         if not self.dead:
             surf.blit(self.img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
         else:
-            angle = math.atan2(self.p1['y'] - self.p2['y'], self.p1['x'] - self.p2['x'])
-            deg = -math.degrees(angle) - 90 
+            deg = self.get_dead_angle()
             
             img_copy = pygame.transform.rotate(self.img, deg)
 
-            mp_x = (self.p1['x'] + self.p2['x']) * 0.5
-            mp_y = (self.p1['y'] + self.p2['y']) * 0.5
+            midpoint = self.get_dead_midpoint()
             
-            surf.blit(img_copy, (mp_x - (img_copy.get_width() / 2) - scroll[0], mp_y - (img_copy.get_height() / 2) - scroll[1]))
+            surf.blit(img_copy, (midpoint.x - (img_copy.get_width() / 2) - scroll[0], midpoint.y - (img_copy.get_height() / 2) - scroll[1]))
             # pygame.draw.circle(surf, (255, 255, 0), (self.p1['x'], self.p1['y']), self.node_radius)
             # pygame.draw.circle(surf, (255, 255, 0), (self.p2['x'], self.p2['y']), self.node_radius)

@@ -1,4 +1,5 @@
 import pygame, sys, time, moderngl, array, random
+import pygame.geometry
 
 from src.bip import *
 from src.util import *
@@ -180,6 +181,17 @@ class App:
                 splat[3] = -1
             splat[1][1] += 0.14 * self.dt
             splat[1][0] += (splat[1][0] * 0.995 - splat[1][0]) * self.dt
+
+            splat_circle = pygame.geometry.Circle(splat[0][0], splat[0][1], max(1, splat[3]))
+
+            for enemy in self.enemies:
+                if enemy.particle_check(splat[0])[0]:
+                    for _ in range(5):
+                        angle = random.random() * math.pi * 2
+                        vel = 0.2
+                        self.slime.append([list(splat[0]), [math.cos(angle) * vel, math.sin(angle) * vel], splat[2]])
+                    splat[3] = -1
+
             pygame.draw.circle(self.level_surf, splat[2], [splat[0][0] - render_scroll[0], splat[0][1] - render_scroll[1]], splat[3])
             splat[3] -= 0.001 * self.dt
             if splat[3] <= 0:
@@ -196,21 +208,45 @@ class App:
                 target_tile = self.tile_map.tile_map[tile_loc]
                 if target_tile["type"] in PHYSICS_TILES:
                     img_mask = pygame.mask.from_surface(target_tile["img"])
-                    prev_img_pos = (prev_pos[0]%TILE_SIZE, prev_pos[1]%TILE_SIZE)
-                    img_pos = (slime[0][0]%TILE_SIZE, slime[0][1]%TILE_SIZE)
+                    tile_x = math.floor(slime[0][0] / TILE_SIZE) * TILE_SIZE
+                    tile_y = math.floor(slime[0][1] / TILE_SIZE) * TILE_SIZE
+                    prev_img_pos = (prev_pos[0] - tile_x, prev_pos[1] - tile_y)
+                    img_pos = (slime[0][0] - tile_x, slime[0][1] - tile_y)
                     pygame.draw.line(target_tile["img"], slime[2], prev_img_pos, img_pos)
                     try:
-                        if not (target_tile["img"].get_at((img_pos[0], img_pos[1] + 1)) == slime[2]):
-                            target_tile["img"].set_at((img_pos[0], img_pos[1] + 1), (22, 19, 35))
+                        if 0 < img_pos[0] < TILE_SIZE - 1 and 0 < img_pos[1] < TILE_SIZE - 2:
+                            if not (target_tile["img"].get_at((img_pos[0], img_pos[1] + 1)) == slime[2]):
+                                target_tile["img"].set_at((img_pos[0], img_pos[1] + 1), (20, 16, 32))
                     except IndexError:
                         pass
+                        
+                    target_tile["img"].set_colorkey(None)
                     target_tile["img"].blit(img_mask.to_surface(setcolor=(0, 0, 0, 0), unsetcolor=(0, 255, 0)), (0, 0))
                     target_tile["img"].set_colorkey((0, 255, 0))
                     drawn = 1
+            for enemy in self.enemies:
+                collide, local_pos = enemy.particle_check(slime[0])
+                if collide:
+                    img_mask = pygame.mask.from_surface(enemy.img)
+                    local_x = max(0, min(enemy.img.get_width() - 1, int(local_pos[0])))
+                    local_y = max(0, min(enemy.img.get_height() - 1, int(local_pos[1])))
+                    if img_mask.get_at((local_x, local_y)):
+                        _, prev_local_pos = enemy.particle_check(prev_pos)
+                        if prev_local_pos is None:
+                            prev_local_pos = local_pos
+                        prev_local_x = max(0, min(enemy.img.get_width() - 1, int(prev_local_pos[0])))
+                        prev_local_y = max(0, min(enemy.img.get_height() - 1, int(prev_local_pos[1])))
+
+                        pygame.draw.line(enemy.img, slime[2], (prev_local_x, prev_local_y), (local_x, local_y))
+
+                        enemy.img.set_colorkey(None)
+                        enemy.img.blit(img_mask.to_surface(setcolor=(0, 0, 0, 0), unsetcolor=(0, 255, 0)), (0, 0))
+                        enemy.img.set_colorkey((0, 255, 0))
+                        drawn = 1
             if not drawn:
                 pygame.draw.line(self.level_surf, slime[2], [prev_pos[0] - render_scroll[0], prev_pos[1] - render_scroll[1]], [slime[0][0] - render_scroll[0], slime[0][1] - render_scroll[1]])
-            if abs(slime[1][0]) < 0.1:
-                if abs(slime[1][1]) < 0.1: # (22, 19, 35)
+            if abs(slime[1][0]) < 0.01:
+                if abs(slime[1][1]) < 0.01: # (22, 19, 35)
                     self.slime.pop(i)
 
     
