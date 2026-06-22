@@ -1,8 +1,79 @@
-import pygame, math
+import pygame, math, time
 
 from .anim import Anim
 from .util import draw_arc
 from .bip import *
+
+class Pepper:
+    def __init__(self, img, app, target, offset):
+        self.img = img.copy()
+        self.app = app
+        self.pos = pygame.Vector2(target.get_rect().center)
+        self.offset = offset
+
+        self.target = target
+
+        self.timer = 234234
+        self.cooldown = 30
+
+        self.peppers = []
+
+        self.gravity = 0.3
+    
+    def shoot(self, pos, speed=10):
+        if self.timer < self.cooldown:
+            return
+
+        start = list(self.pos)
+        start[0] += self.offset[0]
+        start[1] += self.offset[1]
+        dx = pos[0] - start[0]
+        dy = pos[1] - start[1]
+        distance = math.sqrt(dx ** 2 + dy ** 2)
+
+        if distance == 0:
+            distance = 1
+        
+        t = distance / speed
+        vx = dx / t
+        vy = (dy - (0.5 * self.gravity * t * t)) / t
+        vel = [vx, vy]
+        self.timer = 0
+
+        self.peppers.append([start, vel, 0, 0])
+    
+    def update(self):
+        self.timer += self.app.dt
+        if self.target:
+            self.pos = pygame.Vector2(self.target.get_rect().center)
+
+    def draw(self, surf, scroll):
+        alpha = min(1, self.timer / self.cooldown) * 255
+        self.img.set_alpha(alpha)
+        surf.blit(self.img, (self.pos.x - scroll[0] + self.offset[0], self.pos.y - scroll[1] + self.offset[1] + math.sin(time.time() * 5) * 2))
+
+        self.img.set_alpha(255)
+        for p in self.peppers.copy():
+            kill = False
+            p[1][1] += self.gravity * self.app.dt
+            p[0][0] += p[1][0] * self.app.dt
+            p[0][1] += p[1][1] * self.app.dt
+
+            if self.app.tile_map.solid_check(p[0]):
+                kill = True
+
+            p[2] += self.app.dt * 5 # make it spin
+            p[3] += self.app.dt
+
+            if p[3] > 1000:
+                kill = True
+            
+            if kill:
+                self.peppers.remove(p)
+            else:
+                img_copy = pygame.transform.rotate(self.img, p[2])
+                surf.blit(img_copy, (p[0][0] + (self.img.get_width() / 2) - img_copy.get_width() / 2 - scroll[0], p[0][1] + self.img.get_height() / 2 - img_copy.get_height() / 2 - scroll[1]))
+
 
 class Shotgun:
     def __init__(self, img, app, target, offset):
@@ -236,7 +307,8 @@ class Player:
 
         self.sword = Sword(self.app.assets["player"]["knife"], app, self.pos, self, offset=(0, -5))
         self.shotgun = Shotgun(self.app.assets["player"]["shotgun"], app, self, (0, -10))
-        self.mode = "shotgun"
+        self.pepper = Pepper(self.app.assets["player"]["pepper"], app, self, (0, 0))
+        self.mode = "pepper"
 
     def get_attack_rect(self):
         return pygame.Rect(self.get_rect().centerx - 15 * int(self.flip), self.pos.y + 10, 15, self.dimensions.y - 10)
@@ -254,7 +326,7 @@ class Player:
     def update(self, dt):
         if self.dead:
             return
-
+        
         # ----- collision handling ----- #
         self.collisions = {"right": False, "left": False, "down": False, "up": False}
         
@@ -333,6 +405,8 @@ class Player:
             self.sword.update()
         elif self.mode == "shotgun":
             self.shotgun.update()
+        elif self.mode == "pepper":
+            self.pepper.update()
     
     def release_jump(self):
         self.controls["up"] = False
@@ -376,7 +450,10 @@ class Player:
             else:
                 anim.draw(surf, scroll, self.pos)
                 self.sword.draw(surf, scroll)
-        else:
+        elif self.mode == "shotgun":
             anim.draw(surf, scroll, self.pos)
             self.shotgun.draw(surf, scroll)
+        elif self.mode == "pepper":
+            anim.draw(surf, scroll, self.pos)
+            self.pepper.draw(surf, scroll)
         # self.sword.draw_slash(surf, scroll)

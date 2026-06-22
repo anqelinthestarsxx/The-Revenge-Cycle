@@ -53,7 +53,8 @@ class App:
                 },
                 "knife": load_image("player/knife.png"),
                 "shotgun": load_image("player/shotgun.png"),
-                "bullet": load_image("player/bullet.png")
+                "bullet": load_image("player/bullet.png"),
+                "pepper": load_image("player/pepper.png")
             },
             "placeholder": load_image("placeholder.png")
         }
@@ -240,6 +241,12 @@ class App:
                             self.player.sword.update()
                         elif self.player.mode == "shotgun":
                             self.player.shotgun.shoot()
+                        elif self.player.mode == "pepper":
+                            mouse_pos = pygame.Vector2(pygame.mouse.get_pos())
+                            mouse_pos /= SCALE
+                            mouse_pos -= self.level_surf_pos
+                            mouse_pos /= self.ls_scale
+                            self.player.pepper.shoot(mouse_pos)
                 elif event.type == pygame.KEYUP:
                     if event.key in {pygame.K_UP, pygame.K_SPACE, pygame.K_w}:
                         self.player.release_jump()
@@ -249,6 +256,19 @@ class App:
                         self.player.controls["left"] = False
                     elif event.key in {pygame.K_RIGHT, pygame.K_d}:
                         self.player.controls["right"] = False
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if self.player.mode == "sword":
+                        if self.player.sword.attacked > 10:
+                            self.player.sword.attack()
+                        self.player.sword.update()
+                    elif self.player.mode == "shotgun":
+                        self.player.shotgun.shoot()
+                    elif self.player.mode == "pepper":
+                        mouse_pos = pygame.Vector2(pygame.mouse.get_pos())
+                        mouse_pos /= SCALE
+                        mouse_pos -= self.level_surf_pos
+                        mouse_pos /= self.ls_scale
+                        self.player.pepper.shoot(mouse_pos)
             
             # delta time
             self.dt = (time.time() - self.last_time) * 60
