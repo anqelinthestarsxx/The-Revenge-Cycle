@@ -1,8 +1,9 @@
-import pygame, math, time
+import pygame, math, time, random
 
 from .anim import Anim
 from .util import draw_arc
 from .bip import *
+from .particles import *
 
 import pygame.geometry
 
@@ -29,6 +30,15 @@ class Pepper:
         for enemy in self.app.enemies:
             if circle.colliderect(enemy.get_rect()) and not enemy.dead:
                 enemy.die(pygame.Vector2(vel), pos)
+        for _ in range(random.randint(50, 60)):
+            spread = 5
+            self.app.particles.append(Particle(self.app, "explosion", [pos[0] + random.random() * spread - spread / 2, pos[1] + random.random() * spread - spread / 2], [random.random() - 0.5, random.random() * -1 - 0.5], random.random(), False))
+            self.app.particles[-1].speed = 0.3
+            self.app.particles[-1].decay = 50
+        for _ in range(random.randint(30, 50)):
+            angle = math.pi * 2 * random.random()
+            speed = random.random() * 0.5 + 0.25
+            self.app.smoke.append([list(pos),[math.cos(angle) * speed, math.sin(angle) * speed], 1, random.randint(200, 255), 0, random.randint(0, 360), random.choice([(163, 172, 190)])])
     
     def shoot(self, pos, speed=9):
         if self.timer < self.cooldown:

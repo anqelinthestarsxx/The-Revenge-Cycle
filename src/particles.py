@@ -17,7 +17,7 @@ class Particle:
         self.friction = pygame.Vector2(friction)
         self.timer = 0
         self.angle = random.random() * 360
-        self.decay = 2
+        self.decay = 4
     
     def img(self):
         self.frame += max(0.025, self.speed) * self.app.dt
@@ -50,6 +50,7 @@ class Particle:
                 self.vel[1] *= 0.9
         self.pos[1] += self.vel[1] * self.app.dt
         self.vel[1] += (self.vel[1] * self.friction.y - self.vel[1]) * self.app.dt
+        self.vel[1] += 0.02 * self.app.dt
         if self.solid:
             check = self.app.tile_map.solid_check(self.pos)
             if check:
@@ -67,6 +68,7 @@ class Particle:
         if self.particle_type == "bubble":
             img = pygame.transform.rotate(img, self.angle)
         if self.pos in self.app:
+            self.alpha = (1 - self.frame / len(self.animation)) * 255
             img.set_alpha(self.alpha)
             surf.blit(img, (self.pos[0] - scroll[0] - img.get_width() // 2, self.pos[1] - scroll[1] - img.get_height() // 2))
 

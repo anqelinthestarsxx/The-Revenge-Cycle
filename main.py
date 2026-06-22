@@ -58,7 +58,9 @@ class App:
                 "pepper": load_image("player/pepper.png")
             },
             "placeholder": load_image("placeholder.png"),
-            "firefly": load_animation("firefly.png", 5, 5, 20)
+            "firefly": load_animation("firefly.png", 5, 5, 20),
+            "particle/explosion": load_animation("particles/explosion.png", 5, 5, 15),
+            "particle/particle": load_animation("particles/particle.png", 5, 5, 4)
         }
 
         self.tile_map = TileMap(self)
@@ -99,7 +101,7 @@ class App:
             if random.random() * 4 < self.dt:
                 fly[3] = random.random() * 2 * random.choice([-1, 1])
                 fly[2] = random.random() * 5 + 5
-            loc = (((fly[0][0] - scroll[0]) % self.screen.get_width()), ((fly[0][1] - scroll[1]) % self.screen.get_height()))
+            loc = (((fly[0][0] - scroll[0]) % self.level_surf.get_width()), ((fly[0][1] - scroll[1]) % self.level_surf.get_height()))
             fly[4] = (fly[4] + 0.1 * self.dt) % len(self.assets["firefly"])
             surf = self.assets["firefly"][math.floor(fly[4])]
             surf.set_alpha(100)
@@ -119,7 +121,7 @@ class App:
             else: 
                 self.kickup_surf.fill(p[3])
                 self.kickup_surf.set_alpha(int(p[2] * 255))
-                self.screen.blit(self.kickup_surf, (int(p[0][0] - render_scroll[0]), int(p[0][1] - render_scroll[1])))
+                self.level_surf.blit(self.kickup_surf, (int(p[0][0] - render_scroll[0]), int(p[0][1] - render_scroll[1])))
             p[0][0] += p[1][0] * self.dt
             if self.tile_map.solid_check(p[0]):
                 p[0][0] -= p[1][0] * self.dt
@@ -136,10 +138,11 @@ class App:
         for i, spark in sorted(enumerate(self.sparks), reverse=True):
             spark.update(self.dt)
             if spark.speed >= 0:
-                spark.draw(self.screen, render_scroll)
+                spark.draw(self.level_surf, render_scroll)
             else:
                 self.sparks.pop(i)
     
+    @staticmethod
     def alpha_surf(dim, alpha, color):
         surf = pygame.Surface(dim)
         surf.fill(color)
@@ -149,9 +152,9 @@ class App:
     def calc_smoke(self, smoke, render_scroll):
         smoke[0][0] += smoke[1][0] * self.dt
         smoke[0][1] += smoke[1][1] * self.dt
-        smoke[1][0] += (smoke[1][0] * 0.9 - smoke[1][0]) * self.dt
+        smoke[1][0] += (smoke[1][0] * 0.98 - smoke[1][0]) * self.dt
         smoke[1][1] += (smoke[1][1] * 0.98 - smoke[1][1]) * self.dt
-        smoke[4] += (smoke[5] - smoke[4]) / 10 * self.dt
+        smoke[4] += (smoke[5] - smoke[4]) / 2 * self.dt
         smoke[3] = max(0, smoke[3] - SMOKE_DELAY * self.dt)
         smoke[2] += 0.2 * self.dt
         surf = pygame.transform.rotate(self.alpha_surf([smoke[2], smoke[2]], smoke[3], smoke[6]), smoke[4])
@@ -177,7 +180,7 @@ class App:
                 splat[3] = -1
             splat[1][1] += 0.14 * self.dt
             splat[1][0] += (splat[1][0] * 0.995 - splat[1][0]) * self.dt
-            pygame.draw.circle(self.screen, splat[2], [splat[0][0] - render_scroll[0], splat[0][1] - render_scroll[1]], splat[3])
+            pygame.draw.circle(self.level_surf, splat[2], [splat[0][0] - render_scroll[0], splat[0][1] - render_scroll[1]], splat[3])
             splat[3] -= 0.001 * self.dt
             if splat[3] <= 0:
                 self.splat.remove(splat)
@@ -205,7 +208,7 @@ class App:
                     target_tile["img"].set_colorkey((0, 255, 0))
                     drawn = 1
             if not drawn:
-                pygame.draw.line(self.screen, slime[2], [prev_pos[0] - render_scroll[0], prev_pos[1] - render_scroll[1]], [slime[0][0] - render_scroll[0], slime[0][1] - render_scroll[1]])
+                pygame.draw.line(self.level_surf, slime[2], [prev_pos[0] - render_scroll[0], prev_pos[1] - render_scroll[1]], [slime[0][0] - render_scroll[0], slime[0][1] - render_scroll[1]])
             if abs(slime[1][0]) < 0.1:
                 if abs(slime[1][1]) < 0.1: # (22, 19, 35)
                     self.slime.pop(i)
@@ -268,6 +271,9 @@ class App:
         pygame.quit()
         sys.exit()
     
+    def __contains__(self, pos):
+        return self.scroll[0] <= pos[0] <= self.scroll[0] + self.level_surf.get_width() and self.scroll[1] <= pos[1] <= self.scroll[1] + self.level_surf.get_height()
+    
     def update(self):
         # update entities
         self.player.update(self.dt)
@@ -291,12 +297,20 @@ class App:
             enemy.draw(self.level_surf, render_scroll)
         self.player.draw(self.level_surf, render_scroll)
 
+        for particle in self.particles.copy():
+            kill = particle.update()
+            particle.draw(self.level_surf, render_scroll)
+            if particle.particle_type == 'leaf' and (not particle.done):
+                particle.pos[0] += math.sin(particle.frame * 0.08) * 0.8 * self.dt - 0.5 * self.dt * (average_gust * 0.1)
+                particle.vel[1] = min(0.2, particle.vel[1] + 0.005 / (average_gust * 0.1) * self.dt)
+            if kill:
+                self.particles.remove(particle)
         self.update_kickup(render_scroll)
         self.update_sparks(render_scroll)
         self.cinders.update(self.level_surf, render_scroll)
         self.update_slime(render_scroll)
 
-        self.screen.fblits([self.calc_smoke(smoke, render_scroll) for smoke in self.smoke.copy()])
+        self.level_surf.fblits([self.calc_smoke(smoke, render_scroll) for smoke in self.smoke.copy()])
         self.update_fireflies(render_scroll)
 
         level_size = (self.level_surf.get_width() * self.ls_scale, self.level_surf.get_height() * self.ls_scale)
