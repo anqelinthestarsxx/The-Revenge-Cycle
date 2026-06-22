@@ -28,9 +28,6 @@ class Pepper:
     def explode(self, pos, vel):
         self.app.screen_shake = max(self.app.screen_shake, 8)
         circle = pygame.geometry.Circle(pos[0], pos[1], self.explode_radius)
-        for enemy in self.app.enemies:
-            if circle.colliderect(enemy.get_rect()) and not enemy.dead:
-                enemy.die(pygame.Vector2(vel), pos)
         for _ in range(random.randint(50, 60)):
             spread = 5
             self.app.particles.append(Particle(self.app, "explosion", [pos[0] + random.random() * spread - spread / 2, pos[1] + random.random() * spread - spread / 2], [random.random() - 0.5, random.random() * -1 - 0.5], random.random(), False))
@@ -68,6 +65,9 @@ class Pepper:
             angle = random.random() * math.pi * 2
             vel = random.random() * 5 
             self.app.splat.append([list(kpos), [math.cos(angle) * vel, math.sin(angle) * vel], random.choice([(196, 44, 54), (123, 207, 92)]), 3])
+        for enemy in self.app.enemies:
+            if circle.colliderect(enemy.get_rect()) and not enemy.dead:
+                enemy.die(pygame.Vector2(vel), pos)
     
     def shoot(self, pos, speed=9):
         if self.timer < self.cooldown:

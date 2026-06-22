@@ -1,6 +1,8 @@
-import pygame, math
+import pygame, math, random
 
 from .bip import *
+from .sparks import *
+from .particles import *
 
 BOUNCE = 0.8
 FRICTION = 0.9
@@ -43,7 +45,40 @@ class Enemy:
             p2 = pygame.Vector2(self.pos.x + self.node_radius, self.pos.y + self.dimensions.y - self.node_radius)
             angle = math.atan2(p2.y - impact_point.y, p2.x - impact_point.x)
             self.p2 = {"x": p2[0], "y": p2[1], "oldx": p2[0] - math.cos(angle) * force, "oldy": p2[1] - math.sin(angle) * force}
-    
+
+            self.app.screen_shake = max(self.app.screen_shake, 16)
+            kpos = list(impact_point)
+            while self.app.tile_map.solid_check(kpos):
+                kpos[1] -= 2
+            for _ in range(random.randint(40, 60)):
+                angle = 2 * math.pi * random.random()
+                speed = random.random() * 4 - 2
+                self.app.kickup.append([list(kpos), [math.cos(angle) * speed, math.sin(angle) * speed * 2], random.random() * 0.05 + 2, random.choice([(237, 82, 89), (196, 44, 54), (120, 31, 44)])])
+            for _ in range(random.randint(20, 30)):
+                angle = random.random() * math.pi * 2
+                speed = random.random() * 3
+                self.app.sparks.append(
+                    Spark(list(kpos), angle, speed, random.choice([(237, 82, 89), (196, 44, 54)]))
+                )
+            for _ in range(random.randint(50, 60)):
+                angle = random.random() * math.pi * 2
+                speed = random.random() * 5
+                self.app.particles.append(Particle(self.app, 'particle', list(kpos), [math.cos(angle + math.pi) * speed * 0.5, math.sin(angle + math.pi) * speed * 0.5], random.randint(0, 7)))
+                self.app.particles[-1].speed += 0.1
+                self.app.cinders.append([list(kpos), [math.cos(angle) * speed, math.sin(angle) * speed], random.randint(2, 20), random.choice([(237, 82, 89), (196, 44, 54), (120, 31, 44)])])
+            for _ in range(15):
+                angle = random.random() * math.pi * 2
+                speed = random.random() * 5
+                self.app.slime.append([pygame.Vector2(kpos) + pygame.Vector2(random.random() * 10 - 5, random.random() * 10 - 5), [math.cos(angle) * speed, math.sin(angle) * speed], random.choice([(237, 82, 89), (196, 44, 54), (120, 31, 44)])])
+            for _ in range(20):
+                angle = random.random() * math.pi * 2
+                vel = random.random() * 10
+                self.app.splat.append([pygame.Vector2(kpos) + pygame.Vector2(random.random() * 10 - 5, random.random() * 10 - 5), [math.cos(angle) * vel, math.sin(angle) * vel], random.choice([(237, 82, 89), (196, 44, 54), (120, 31, 44)]), 3])
+            for _ in range(random.randint(30, 50)):
+                angle = math.pi * 2 * random.random()
+                speed = random.random()
+                self.app.smoke.append([list(kpos),[math.cos(angle) * speed, math.sin(angle) * speed], 1, random.randint(200, 255), 0, random.randint(0, 360), random.choice([(237, 82, 89), (196, 44, 54), (120, 31, 44)])])
+
     def update(self, dt):
         if self.dead:
             vels = []
