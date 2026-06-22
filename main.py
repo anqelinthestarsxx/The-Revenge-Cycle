@@ -5,6 +5,7 @@ from src.util import *
 from src.tiles import *
 from src.player import Player
 from src.enemies import Enemy
+from src.particles import *
 
 pygame.init()
 pygame.mixer.init()
@@ -56,7 +57,8 @@ class App:
                 "bullet": load_image("player/bullet.png"),
                 "pepper": load_image("player/pepper.png")
             },
-            "placeholder": load_image("placeholder.png")
+            "placeholder": load_image("placeholder.png"),
+            "firefly": load_animation("firefly.png", 5, 5, 20)
         }
 
         self.tile_map = TileMap(self)
@@ -74,6 +76,139 @@ class App:
         self.screen_shake = 0
 
         self.player = Player(self, [15, 31], [20, 50], "black")
+
+        self.particles = []
+        self.wind = ([0, 10], [0, 15], [0, 5])
+        self.kickup = []
+        self.kickup_surf = pygame.Surface((1, 1))
+        self.sparks = []
+        self.smoke = []
+        self.fireflies = []
+        self.slime = []
+        self.splat = []
+        for _ in range(10):
+            # [pos, dir, angle]
+            self.fireflies.append([[random.random() * 10000, random.random() * 10000], random.random() * math.pi * 2, random.random() * 10 + 10, random.random() * 4 * random.choice([-1, 1]), random.random() * 50])
+        self.cinders = PhysicsParticles(self, trail=True, bounce=0.3, explode=True, friction=0.7)
+    
+    def update_fireflies(self, scroll):
+        for fly in self.fireflies:
+            fly[0][0] += math.cos(fly[1]) * fly[2] * self.dt * 0.05
+            fly[0][1] += math.sin(fly[1]) * fly[2] * self.dt * 0.05
+            fly[1] += fly[3] * self.dt * 0.003
+            if random.random() * 4 < self.dt:
+                fly[3] = random.random() * 2 * random.choice([-1, 1])
+                fly[2] = random.random() * 5 + 5
+            loc = (((fly[0][0] - scroll[0]) % self.screen.get_width()), ((fly[0][1] - scroll[1]) % self.screen.get_height()))
+            fly[4] = (fly[4] + 0.1 * self.dt) % len(self.assets["firefly"])
+            surf = self.assets["firefly"][math.floor(fly[4])]
+            surf.set_alpha(100)
+            self.level_surf.blit(surf, loc)
+    
+    def update_kickup(self, render_scroll):
+        # p: [pos, vel, size, color]
+        decay = 0.01
+        bounce = 0.7
+        friction = 0.98
+        gravity = 0.125
+
+        for i, p in sorted(enumerate(self.kickup), reverse=True):
+            p[2] -= decay * self.dt
+            if p[2] <= 0:
+                self.kickup.pop(i)
+            else: 
+                self.kickup_surf.fill(p[3])
+                self.kickup_surf.set_alpha(int(p[2] * 255))
+                self.screen.blit(self.kickup_surf, (int(p[0][0] - render_scroll[0]), int(p[0][1] - render_scroll[1])))
+            p[0][0] += p[1][0] * self.dt
+            if self.tile_map.solid_check(p[0]):
+                p[0][0] -= p[1][0] * self.dt
+                p[1][0] *= -bounce
+                p[1][1] *= friction
+            p[0][1] += p[1][1] * self.dt
+            if self.tile_map.solid_check(p[0]):
+                p[0][1] -= p[1][1] * self.dt
+                p[1][1] *= -bounce
+                p[1][0] *= friction
+            p[1][1] = min(8, p[1][1] + gravity * self.dt)
+    
+    def update_sparks(self, render_scroll):
+        for i, spark in sorted(enumerate(self.sparks), reverse=True):
+            spark.update(self.dt)
+            if spark.speed >= 0:
+                spark.draw(self.screen, render_scroll)
+            else:
+                self.sparks.pop(i)
+    
+    def alpha_surf(dim, alpha, color):
+        surf = pygame.Surface(dim)
+        surf.fill(color)
+        surf.set_alpha(alpha)
+        return surf.convert_alpha()
+    
+    def calc_smoke(self, smoke, render_scroll):
+        smoke[0][0] += smoke[1][0] * self.dt
+        smoke[0][1] += smoke[1][1] * self.dt
+        smoke[1][0] += (smoke[1][0] * 0.9 - smoke[1][0]) * self.dt
+        smoke[1][1] += (smoke[1][1] * 0.98 - smoke[1][1]) * self.dt
+        smoke[4] += (smoke[5] - smoke[4]) / 10 * self.dt
+        smoke[3] = max(0, smoke[3] - SMOKE_DELAY * self.dt)
+        smoke[2] += 0.2 * self.dt
+        surf = pygame.transform.rotate(self.alpha_surf([smoke[2], smoke[2]], smoke[3], smoke[6]), smoke[4])
+        if not smoke[3]:
+            self.smoke.remove(smoke)
+        return (surf, (smoke[0][0] - surf.get_width() * 0.5 - render_scroll[0], smoke[0][1] - surf.get_height() * 0.5 - render_scroll[1]))
+    
+    def update_slime(self, render_scroll):
+        for splat in self.splat.copy():
+            splat[0][0] += splat[1][0] * self.dt
+            if self.tile_map.solid_check(splat[0]):
+                for _ in range(5):
+                    angle = random.random() * math.pi * 2
+                    vel = 0.2
+                    self.slime.append([list(splat[0]), [math.cos(angle) * vel, math.sin(angle) * vel], splat[2]])
+                splat[3] = -1
+            splat[0][1] += splat[1][1] * self.dt
+            if self.tile_map.solid_check(splat[0]):
+                for _ in range(5):
+                    angle = random.random() * math.pi * 2
+                    vel = 0.2
+                    self.slime.append([list(splat[0]), [math.cos(angle) * vel, math.sin(angle) * vel], splat[2]])
+                splat[3] = -1
+            splat[1][1] += 0.14 * self.dt
+            splat[1][0] += (splat[1][0] * 0.995 - splat[1][0]) * self.dt
+            pygame.draw.circle(self.screen, splat[2], [splat[0][0] - render_scroll[0], splat[0][1] - render_scroll[1]], splat[3])
+            splat[3] -= 0.001 * self.dt
+            if splat[3] <= 0:
+                self.splat.remove(splat)
+        for i, slime in sorted(enumerate(self.slime), reverse=True):
+            prev_pos = slime[0].copy()
+            slime[0][0] += slime[1][0] * self.dt
+            slime[0][1] += slime[1][1] * self.dt
+            slime[1][0] += (slime[1][0] * 0.9 - slime[1][0]) * self.dt
+            slime[1][1] += (slime[1][1] * 0.9 - slime[1][1]) * self.dt
+            tile_loc = f"{math.floor(slime[0][0] / TILE_SIZE)};{math.floor(slime[0][1] / TILE_SIZE)}"
+            drawn = 0
+            if tile_loc in self.tile_map.tile_map:
+                target_tile = self.tile_map.tile_map[tile_loc]
+                if target_tile["type"] in PHYSICS_TILES:
+                    img_mask = pygame.mask.from_surface(target_tile["img"])
+                    prev_img_pos = (prev_pos[0]%TILE_SIZE, prev_pos[1]%TILE_SIZE)
+                    img_pos = (slime[0][0]%TILE_SIZE, slime[0][1]%TILE_SIZE)
+                    pygame.draw.line(target_tile["img"], slime[2], prev_img_pos, img_pos)
+                    try:
+                        if not (target_tile["img"].get_at((img_pos[0], img_pos[1] + 1)) == slime[2]):
+                            target_tile["img"].set_at((img_pos[0], img_pos[1] + 1), (22, 19, 35))
+                    except IndexError:
+                        pass
+                    target_tile["img"].blit(img_mask.to_surface(setcolor=(0, 0, 0, 0), unsetcolor=(0, 255, 0)), (0, 0))
+                    target_tile["img"].set_colorkey((0, 255, 0))
+                    drawn = 1
+            if not drawn:
+                pygame.draw.line(self.screen, slime[2], [prev_pos[0] - render_scroll[0], prev_pos[1] - render_scroll[1]], [slime[0][0] - render_scroll[0], slime[0][1] - render_scroll[1]])
+            if abs(slime[1][0]) < 0.1:
+                if abs(slime[1][1]) < 0.1: # (22, 19, 35)
+                    self.slime.pop(i)
 
     
     def reset(self):
@@ -155,6 +290,14 @@ class App:
         for enemy in self.enemies:
             enemy.draw(self.level_surf, render_scroll)
         self.player.draw(self.level_surf, render_scroll)
+
+        self.update_kickup(render_scroll)
+        self.update_sparks(render_scroll)
+        self.cinders.update(self.level_surf, render_scroll)
+        self.update_slime(render_scroll)
+
+        self.screen.fblits([self.calc_smoke(smoke, render_scroll) for smoke in self.smoke.copy()])
+        self.update_fireflies(render_scroll)
 
         level_size = (self.level_surf.get_width() * self.ls_scale, self.level_surf.get_height() * self.ls_scale)
         self.level_surf_pos = pygame.Vector2(
