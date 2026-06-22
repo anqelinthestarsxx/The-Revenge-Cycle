@@ -175,7 +175,7 @@ class Shotgun:
             self.app.particles.append(Particle(self.app, "explosion", [pos[0] + 1, pos[1] + 1], [math.cos(angle) * 3, math.sin(angle) * 3], random.random(), False))
             self.app.particles[-1].speed = 2
             self.app.particles[-1].decay = 50
-            self.app.sparks.append(Spark([pos[0] + 1, pos[1] + 1], angle, 3, (219, 224, 231)))
+            self.app.sparks.append(Spark([pos[0] + 1, pos[1] + 1], angle +( random.random() - 0.5) * 0.25, random.random() * 3, (219, 224, 231)))
     
     def update(self):
         self.timer += self.app.dt
@@ -208,6 +208,14 @@ class Shotgun:
                 kill = True
             
             if kill:
+                for _ in range(random.randint(10, 15)):
+                    spread = 1
+                    pos = bullet[0]
+                    angle = bullet[1]
+                    self.app.particles.append(Particle(self.app, "explosion", [pos[0] + 1, pos[1] + 1], [math.cos(angle) * 3, math.sin(angle) * 3], random.random(), False))
+                    self.app.particles[-1].speed = 2
+                    self.app.particles[-1].decay = 50
+                    self.app.sparks.append(Spark([pos[0] + 1, pos[1] + 1], angle +( random.random() - 0.5) * 0.25, random.random() * 3, (219, 224, 231)))
                 self.bullets.remove(bullet)
             else:
                 img_copy = pygame.transform.rotate(bullet_img, math.degrees(bullet[1]))
