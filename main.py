@@ -352,8 +352,8 @@ class App:
         self.player.update(self.dt)
         for enemy in self.enemies:
             enemy.update(self.dt)
-            if not self.player.dead and random.random() < 0.005:
-                enemy.pepper.shoot(pygame.Vector2(self.player.get_rect().center) + pygame.Vector2(random.random() * 50 - 25, random.random() * 50 - 25))
+            # if not self.player.dead and random.random() < 0.005:
+                # enemy.pepper.shoot(pygame.Vector2(self.player.get_rect().center) + pygame.Vector2(random.random() * 50 - 25, random.random() * 50 - 25))
 
         # render to screen
         self.screen.fill((14, 130, 206))

@@ -39,7 +39,9 @@ class Enemy:
         self.gravity = 0.3
         self.friction = 0.7
 
-        self.mood = "passive" # possible: passive, angry, panic
+        self.mood = "panic" # possible: passive, angry, panic
+        self.wander = 0
+        self.wander_dir = round(random.random()) * 2 - 1
 
     def get_rect(self):
         return pygame.Rect(self.pos.x, self.pos.y, self.dimensions.x, self.dimensions.y)
@@ -231,11 +233,40 @@ class Enemy:
                     self.die(pygame.Vector2(5, 5), (pygame.Vector2(self.app.player.get_rect().center) + pygame.Vector2(self.get_rect().center)) * 0.5)
             
             if self.mood == "passive":
-                # do idle stuff
-                pass
-            elif self.mode == "panic":
-                pass
-            elif self.mode == "angry":
+                # do idle stuff (chill)
+                self.wander += self.app.dt
+                if self.wander > 240:
+                    self.wander = random.random() * 200
+                    if abs(self.wander_dir) > 0:
+                        self.wander_dir = 0
+                    else:
+                        self.wander_dir = random.choice([-1, 1])
+                    if self.wander_dir > 0:
+                        self.flip = False
+                    elif self.wander_dir < 0:
+                        self.flip = True
+                    else:
+                        self.wander = 0
+                self.movement.x += self.wander_dir * 0.1 * self.app.dt
+                if self.movement.x < 0:
+                    self.flip = True
+                if self.app.tile_map.solid_check((self.get_rect().centerx + TILE_SIZE, self.get_rect().bottom - 1)) or self.app.tile_map.solid_check((self.get_rect().centerx - TILE_SIZE, self.get_rect().bottom - 1)):
+                    self.wander_dir *= -1
+            elif self.mood == "panic":
+                self.wander += self.app.dt
+                if self.wander_dir == 0:
+                    self.wander_dir = random.choice([-1, 1])
+                self.movement.x += self.wander_dir * 0.4 * self.app.dt
+                if self.movement.x < 0:
+                    self.flip = True
+                else:
+                    self.flip = False
+                if self.app.tile_map.solid_check((self.get_rect().centerx + TILE_SIZE, self.get_rect().bottom - 1)) or self.app.tile_map.solid_check((self.get_rect().centerx - TILE_SIZE, self.get_rect().bottom - 1)) or abs(self.app.player.get_rect().centerx - self.get_rect().centerx) < 50:
+                    if self.wander > 40:
+                        self.wander = 0
+                        self.wander_dir *= -1
+                
+            elif self.mood == "angry":
                 pass
             
     
