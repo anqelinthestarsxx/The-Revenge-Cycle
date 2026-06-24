@@ -39,6 +39,8 @@ class Enemy:
         self.gravity = 0.3
         self.friction = 0.7
 
+        self.mood = "passive" # possible: passive, angry, panic
+
     def get_rect(self):
         return pygame.Rect(self.pos.x, self.pos.y, self.dimensions.x, self.dimensions.y)
     
@@ -120,6 +122,7 @@ class Enemy:
 
             dx, dy = self.p1['x'] - self.p2['x'], self.p1['y'] - self.p2['y']
             distance = math.sqrt(dx ** 2 + dy ** 2)
+
             if distance < 0.1:
                 self.p1['x'] += random.choice([-1, 1])
                 self.p2['y'] += random.choice([-1, 1])
@@ -147,20 +150,26 @@ class Enemy:
                     distance = math.sqrt(dx ** 2 + dy ** 2)
                     if distance < self.node_radius:
                         if distance == 0:
-                            distance = 1
-                            dx = self.node_radius
-                        overlap = self.node_radius - distance
-                        nx = dx / distance
-                        ny = dy / distance
+                            nx = 0
+                            ny = -1
+                            overlap = self.node_radius
+                        else:
+                            overlap = self.node_radius - distance
+                            nx = dx / distance
+                            ny = dy / distance
+
+                        vx = p['x'] - p['oldx']
+                        vy = p['y'] - p['oldy']
+
                         p['x'] += nx * overlap
                         p['y'] += ny * overlap
 
                         if abs(nx) > abs(ny):
-                            p['oldx'] = p['x'] + vx * BOUNCE
-                            p['oldy'] = p['y'] - vy * FRICTION
+                            p['oldx'] = p['x'] + (vx * BOUNCE)
+                            p['oldy'] = p['y'] - (vy * FRICTION)
                         else:
-                            p['oldy'] = p['y'] + vy * BOUNCE
-                            p['oldx'] = p['x'] - vx * FRICTION
+                            p['oldy'] = p['y'] + (vy * BOUNCE)
+                            p['oldx'] = p['x'] - (vx * FRICTION)
 
         else:
             self.falling += dt
@@ -220,6 +229,15 @@ class Enemy:
             if self.app.player.mode == "fists" and self.app.player.attacking:
                 if self.get_rect().colliderect(self.app.player.get_attack_rect()):
                     self.die(pygame.Vector2(5, 5), (pygame.Vector2(self.app.player.get_rect().center) + pygame.Vector2(self.get_rect().center)) * 0.5)
+            
+            if self.mood == "passive":
+                # do idle stuff
+                pass
+            elif self.mode == "panic":
+                pass
+            elif self.mode == "angry":
+                pass
+            
     
     def collide_mask(self, mask, pos):
         self.hurt_mask = pygame.mask.from_surface(self.img)

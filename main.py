@@ -40,6 +40,8 @@ class App:
 
         self.assets = {
             'tiles/grass': load_tile_imgs('tiles/grass.png', 16),
+            'tiles/kitchen': load_tile_imgs('tiles/kitchen.png', 16),
+            'tiles/wood': load_tile_imgs('tiles/wood.png', 16),
             'player': {
                 "black": {
                     "idle": load_animation("player/black/idle.png", 15, 31, 4),

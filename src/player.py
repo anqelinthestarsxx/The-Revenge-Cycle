@@ -537,11 +537,13 @@ class Player:
                     distance = math.sqrt(dx ** 2 + dy ** 2)
                     if distance < self.node_radius:
                         if distance == 0:
-                            distance = 1
-                            dx = self.node_radius
-                        overlap = self.node_radius - distance
-                        nx = dx / distance
-                        ny = dy / distance
+                            nx = 0
+                            ny = -1
+                            overlap = self.node_radius
+                        else:
+                            overlap = self.node_radius - distance
+                            nx = dx / distance
+                            ny = dy / distance
 
                         vx = p['x'] - p['oldx']
                         vy = p['y'] - p['oldy']
