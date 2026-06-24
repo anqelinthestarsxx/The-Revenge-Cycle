@@ -8,8 +8,11 @@ from .sparks import *
 
 import pygame.geometry
 
+BOUNCE = 0.8
+FRICTION = 0.9
+
 class Pepper:
-    def __init__(self, img, app, target, offset):
+    def __init__(self, img, app, target, offset, player=False):
         self.img = img.copy()
         self.app = app
         self.pos = pygame.Vector2(target.get_rect().center)
@@ -24,6 +27,8 @@ class Pepper:
 
         self.gravity = 0.4
         self.explode_radius = 16
+
+        self.player = player
     
     def explode(self, pos, vel):
         self.app.screen_shake = max(self.app.screen_shake, 8)
@@ -63,14 +68,19 @@ class Pepper:
             self.app.slime.append([list(kpos), list(vn.rotate_rad(angle) * speed), (20, 16, 32)])
         for _ in range(20):
             angle = random.random() * math.pi * 2
-            vel = random.random() * 5 
-            self.app.splat.append([list(kpos), [math.cos(angle) * vel, math.sin(angle) * vel], random.choice([(196, 44, 54), (123, 207, 92)]), 3])
-        for enemy in self.app.enemies:
-            if circle.colliderect(enemy.get_rect()) and not enemy.dead:
-                enemy.die(pygame.Vector2(vel), pos)
+            pvel = random.random() * 5 
+            self.app.splat.append([list(kpos), [math.cos(angle) * pvel, math.sin(angle) * pvel], random.choice([(196, 44, 54), (123, 207, 92)]), 3])
+        
+        if self.player:
+            for enemy in self.app.enemies:
+                if circle.colliderect(enemy.get_rect()) and not enemy.dead:
+                    enemy.die(pygame.Vector2(vel), pos)
+        else:
+            if circle.colliderect(self.app.player.get_rect()) and not self.app.player.dead:
+                self.app.player.die(pygame.Vector2(vel), pos)
     
     def shoot(self, pos, speed=9):
-        if self.timer < self.cooldown:
+        if self.timer < self.cooldown or self.target.dead:
             return
 
         start = list(self.pos)
@@ -102,9 +112,10 @@ class Pepper:
                 self.offset[0] = 1
 
     def draw(self, surf, scroll):
-        alpha = min(1, self.timer / self.cooldown) * 255
-        self.img.set_alpha(alpha)
-        surf.blit(self.img, (self.pos.x - scroll[0] + self.offset[0], self.pos.y - scroll[1] + self.offset[1] + math.sin(time.time() * 5) * 2))
+        if not self.target.dead:
+            alpha = min(1, self.timer / self.cooldown) * 255
+            self.img.set_alpha(alpha)
+            surf.blit(self.img, (self.pos.x - scroll[0] + self.offset[0], self.pos.y - scroll[1] + self.offset[1] + math.sin(time.time() * 5) * 2))
 
         self.img.set_alpha(255)
         for p in self.peppers.copy():
@@ -114,8 +125,13 @@ class Pepper:
             p[0][1] += p[1][1] * self.app.dt
 
             circle = pygame.geometry.Circle(p[0][0], p[0][1], 2)
-            for enemy in self.app.enemies:
-                if circle.colliderect(enemy.get_rect()) and not enemy.dead:
+            if self.player:
+                for enemy in self.app.enemies:
+                    if circle.colliderect(enemy.get_rect()) and not enemy.dead:
+                        kill = True
+                        self.explode(p[0], p[1])
+            else:
+                if circle.colliderect(self.app.player.get_rect()) and not self.app.player.dead:
                     kill = True
                     self.explode(p[0], p[1])
 
@@ -137,7 +153,7 @@ class Pepper:
 
 
 class Shotgun:
-    def __init__(self, img, app, target, offset):
+    def __init__(self, img, app, target, offset, player=False):
         self.img = img.copy()
         self.app = app
         self.pos = pygame.Vector2(target.get_rect().center)
@@ -153,9 +169,11 @@ class Shotgun:
     
         self.timer = 1234
         self.cooldown = 10
+
+        self.player = player
     
     def shoot(self):
-        if self.timer <= self.cooldown:
+        if self.timer <= self.cooldown or self.target.dead:
             return
         self.timer = 0
         offset = list(self.offset)
@@ -184,7 +202,7 @@ class Shotgun:
         self.rebound_vel *= 0.3 ** self.app.dt
     
     def draw(self, surf, scroll):
-        speed = 5
+        speed = 4
         bullet_img = self.app.assets["player"]["bullet"]
         for bullet in self.bullets.copy():
             kill = False
@@ -194,11 +212,17 @@ class Shotgun:
             if self.app.tile_map.solid_check(bullet[0]):
                 kill = True
             else:
-                for enemy in self.app.enemies:
-                    if enemy.get_rect().collidepoint(bullet[0][0], bullet[0][1]) and not enemy.dead:
+                if self.player:
+                    for enemy in self.app.enemies:
+                        if enemy.get_rect().collidepoint(bullet[0][0], bullet[0][1]) and not enemy.dead:
+                            kill = True
+                            force = 1
+                            enemy.die(pygame.Vector2(math.cos(bullet[1]) * speed * force, math.sin(bullet[1]) * speed * force), pygame.Vector2(bullet[0]))
+                else:
+                    if self.app.player.get_rect().collidepoint(bullet[0][0], bullet[0][1]) and not self.app.player.dead:
                         kill = True
                         force = 4
-                        enemy.die(pygame.Vector2(math.cos(bullet[1]) * speed * force, math.sin(bullet[1]) * speed * force), pygame.Vector2(bullet[0]))
+                        self.app.player.die(pygame.Vector2(math.cos(bullet[1]) * speed * force, math.sin(bullet[1]) * speed * force), pygame.Vector2(bullet[0]))
 
             bullet[2] += self.app.dt
             if bullet[2] > 240:
@@ -218,6 +242,8 @@ class Shotgun:
                 img_copy = pygame.transform.rotate(bullet_img, math.degrees(bullet[1]))
                 surf.blit(bullet_img, (bullet[0][0] + int(bullet_img.get_width() / 2) - int(img_copy.get_width() / 2) - scroll[0], bullet[0][1] + int(bullet_img.get_height() / 2) - int(img_copy.get_height() / 2) - scroll[1])) 
                 
+        if self.target.dead:
+            return
         offset = list(self.offset)
         if not self.flipped:
             offset[0] -= 4
@@ -383,11 +409,68 @@ class Player:
         self.build_animation(color)
 
         self.sword = Sword(self.app.assets["player"]["knife"], app, self.pos, self, offset=(0, -5))
-        self.shotgun = Shotgun(self.app.assets["player"]["shotgun"], app, self, (0, -10))
-        self.pepper = Pepper(self.app.assets["player"]["pepper"], app, self, (0, 0))
-        self.mode = "fists"
+        self.shotgun = Shotgun(self.app.assets["player"]["shotgun"], app, self, (0, -10), player=True)
+        self.pepper = Pepper(self.app.assets["player"]["pepper"], app, self, (0, 0), player=True)
+        self.mode = "shotgun"
 
         self.attacking = False
+
+        self.node_radius = self.dimensions.x * 0.35
+        self.p1 = {}
+        self.p2 = {}
+
+        self.img = self.idle.animation[0].copy()
+    
+    def die(self, impact: pygame.Vector2, impact_point: pygame.Vector2):
+        if not self.dead:
+            impact = pygame.Vector2(impact)
+            impact_point = pygame.Vector2(impact_point)
+            self.dead = True
+
+            force = min(impact.length(), 16)
+            p1 = pygame.Vector2(self.pos.x + self.node_radius, self.pos.y + self.node_radius)
+            angle = math.atan2(p1.y - impact_point.y, p1.x - impact_point.x)
+            self.p1 = {"x": p1[0], "y": p1[1], "oldx": p1[0] - math.cos(angle) * force - self.movement.x, "oldy": p1[1] - math.sin(angle) * force - self.movement.y}
+            p2 = pygame.Vector2(self.pos.x + self.node_radius, self.pos.y + self.dimensions.y - self.node_radius)
+            angle = math.atan2(p2.y - impact_point.y, p2.x - impact_point.x)
+            self.p2 = {"x": p2[0], "y": p2[1], "oldx": p2[0] - math.cos(angle) * force - self.movement.x, "oldy": p2[1] - math.sin(angle) * force - self.movement.y}
+
+            self.app.screen_shake = max(self.app.screen_shake, 16)
+            kpos = list(impact_point)
+            while self.app.tile_map.solid_check(kpos):
+                kpos[1] -= 2
+            for _ in range(random.randint(40, 60)):
+                angle = 2 * math.pi * random.random()
+                speed = random.random() * 4 - 2
+                self.app.kickup.append([list(kpos), [math.cos(angle) * speed, math.sin(angle) * speed * 2], random.random() * 0.05 + 2, random.choice([(237, 82, 89), (196, 44, 54), (120, 31, 44)])])
+            for _ in range(random.randint(20, 30)):
+                angle = random.random() * math.pi * 2
+                speed = random.random() * 3 + 3
+                self.app.sparks.append(
+                    Spark(list(kpos), angle, speed, random.choice([(237, 82, 89), (196, 44, 54)]))
+                )
+            for _ in range(random.randint(50, 60)):
+                angle = random.random() * math.pi * 2
+                speed = random.random() * 5
+                self.app.particles.append(Particle(self.app, 'particle', list(kpos), [math.cos(angle + math.pi) * speed * 0.5, math.sin(angle + math.pi) * speed * 0.5], random.randint(0, 7)))
+                self.app.particles[-1].speed += 0.1
+                self.app.cinders.append([list(kpos), [math.cos(angle) * speed, math.sin(angle) * speed], random.randint(2, 20), random.choice([(237, 82, 89), (196, 44, 54), (120, 31, 44)])])
+            for _ in range(15):
+                angle = random.random() * math.pi * 2
+                speed = random.random() * 5
+                self.app.slime.append([pygame.Vector2(kpos) + pygame.Vector2(random.random() * 10 - 5, random.random() * 10 - 5), [math.cos(angle) * speed, math.sin(angle) * speed], random.choice([(237, 82, 89), (196, 44, 54), (120, 31, 44)])])
+            angle = random.random() * math.pi * 2
+            vel = random.random() * 2.5 + 7.4
+            self.app.splat.append([pygame.Vector2(kpos), [math.cos(angle) * vel, math.sin(angle) * vel], random.choice([(237, 82, 89), (196, 44, 54), (120, 31, 44)]), 3])
+            self.app.slime.append([pygame.Vector2(kpos) + pygame.Vector2(random.random() * 10 - 5, random.random() * 10 - 5), [math.cos(angle) * speed, math.sin(angle) * speed], random.choice([(237, 82, 89), (196, 44, 54), (120, 31, 44)])])
+            for _ in range(random.randint(50, 60)):
+                angle = random.random() * math.pi * 2
+                vel = random.random() * 2.5 + 7.4
+                self.app.splat.append([pygame.Vector2(kpos) + pygame.Vector2(random.random() * 10 - 5, random.random() * 10 - 5), [math.cos(angle) * vel, math.sin(angle) * vel], random.choice([(237, 82, 89), (196, 44, 54), (120, 31, 44)]), 3])
+            for _ in range(random.randint(30, 50)):
+                angle = math.pi * 2 * random.random()
+                speed = random.random()
+                self.app.smoke.append([list(kpos),[math.cos(angle) * speed, math.sin(angle) * speed], 1, random.randint(200, 255), 0, random.randint(0, 360), random.choice([(237, 82, 89), (196, 44, 54), (120, 31, 44)])])
 
     def get_attack_rect(self):
         return pygame.Rect(self.get_rect().centerx - 15 * int(self.flip), self.pos.y + 10, 15, self.dimensions.y - 10)
@@ -398,13 +481,80 @@ class Player:
         self.run = Anim(self.app.assets["player"][self.color]["run"], 0.2)
         self.jump = Anim(self.app.assets["player"][self.color]["jump"], 0.1, False)
         self.land = Anim(self.app.assets["player"][self.color]["land"], 0.2, False)
-        self.punch = Anim(self.app.assets["player"][self.color]["punch"], 0.3, False)
+        self.punch = Anim(self.app.assets["player"][self.color]["punch"], 0.4, False)
 
     def get_rect(self):
         return pygame.Rect(self.pos.x, self.pos.y, self.dimensions.x, self.dimensions.y)
     
     def update(self, dt):
+        if self.mode == "sword":
+            self.sword.update()
+        elif self.mode == "shotgun":
+            self.shotgun.update()
+        elif self.mode == "pepper":
+            self.pepper.update()
         if self.dead:
+            vels = []
+            for p in [self.p1, self.p2]:
+                vx = (p['x'] - p['oldx'])
+                vx = min(16, max(-16, vx))
+                vy = (p['y'] - p['oldy'])
+                vy = min(16, max(-16, vy))
+                vels.append((vx, vy))
+                p['oldx'] = p['x']
+                p['oldy'] = p['y']
+                p['x'] += vx * dt
+                p['y'] += vy * dt
+                p['y'] += 2 * dt * dt
+
+            dx, dy = self.p1['x'] - self.p2['x'], self.p1['y'] - self.p2['y']
+            distance = math.sqrt(dx ** 2 + dy ** 2)
+
+            if distance < 0.1:
+                self.p1['x'] += random.choice([-1, 1])
+                self.p2['y'] += random.choice([-1, 1])
+                dx, dy = self.p1['x'] - self.p2['x'], self.p1['y'] - self.p2['y']
+                distance = math.sqrt(dx ** 2 + dy ** 2)
+            difference = (self.dimensions.y - self.node_radius * 2) - distance
+            percentage = difference / max(0.001, distance) * 0.5
+            offset_x = dx * percentage
+            offset_y = dy * percentage
+            offset_x = pygame.math.clamp(offset_x, -(self.dimensions.y - self.node_radius * 2), self.dimensions.y - self.node_radius * 2)
+            offset_y = pygame.math.clamp(offset_y, -(self.dimensions.y - self.node_radius * 2), self.dimensions.y - self.node_radius * 2)
+            self.p1['x'] += offset_x
+            self.p1['y'] += offset_y
+            self.p2['x'] -= offset_x
+            self.p2['y'] -= offset_y
+
+            for p, (vx, vy) in zip([self.p1, self.p2], vels):
+                # constrain
+                for rect in self.app.tile_map.physics_rects_around([p['x'], p['y']]):
+                    cx = max(rect.left, min(p['x'], rect.right))
+                    cy = max(rect.top, min(p['y'], rect.bottom))
+
+                    dx = p['x'] - cx
+                    dy = p['y'] - cy
+                    distance = math.sqrt(dx ** 2 + dy ** 2)
+                    if distance < self.node_radius:
+                        if distance == 0:
+                            distance = 1
+                            dx = self.node_radius
+                        overlap = self.node_radius - distance
+                        nx = dx / distance
+                        ny = dy / distance
+
+                        vx = p['x'] - p['oldx']
+                        vy = p['y'] - p['oldy']
+
+                        p['x'] += nx * overlap
+                        p['y'] += ny * overlap
+
+                        if abs(nx) > abs(ny):
+                            p['oldx'] = p['x'] + (vx * BOUNCE)
+                            p['oldy'] = p['y'] - (vy * FRICTION)
+                        else:
+                            p['oldy'] = p['y'] + (vy * BOUNCE)
+                            p['oldx'] = p['x'] - (vx * FRICTION)
             return
         
         # ----- collision handling ----- #
@@ -481,12 +631,7 @@ class Player:
             if self.controls["up"]:
                 self.movement.y = -self.jump_strength 
 
-        if self.mode == "sword":
-            self.sword.update()
-        elif self.mode == "shotgun":
-            self.shotgun.update()
-        elif self.mode == "pepper":
-            self.pepper.update()
+        
     
     def release_jump(self):
         self.controls["up"] = False
@@ -524,30 +669,76 @@ class Player:
         self.run.reset()
         self.jump.reset()
         return self.idle
+    
+    def collide_mask(self, mask, pos):
+        self.hurt_mask = pygame.mask.from_surface(self.img)
+        offset = (pos[0] - self.pos.x, pos[1] - self.pos.y)
+        return self.hurt_mask.overlap(mask, offset)
+
+    def get_dead_midpoint(self):
+        return pygame.Vector2(
+            (self.p1['x'] + self.p2['x']) * 0.5,
+            (self.p1['y'] + self.p2['y']) * 0.5
+        )
+
+    def get_dead_angle(self):
+        angle = math.atan2(self.p1['y'] - self.p2['y'], self.p1['x'] - self.p2['x'])
+        return -math.degrees(angle) - 90
+    
+    def particle_check(self, pos):
+        if not self.dead:
+            return self.get_rect().collidepoint(pos), (pos[0] - self.pos.x, pos[1] - self.pos.y)
+        mp = self.get_dead_midpoint()
+        angle_rad = math.radians(-self.get_dead_angle() + 90)
+        dx = pos[0] - mp.x
+        dy = pos[1] - mp.y
+
+        c = math.cos(-angle_rad)
+        s = math.sin(-angle_rad)
+
+        x = dx * c - dy * s
+        y = dx * s + dy * c
+
+        if -self.img.get_width() / 2 <= x <= self.img.get_width() * 0.5 and -self.img.get_height() * 0.5 <= y <= self.img.get_height() * 0.5:
+            return True, (x + self.img.get_width() * 0.5, y + self.img.get_height() * 0.5)
+        return False, None
 
     def draw(self, surf, scroll):
-        self.sword.offset = (-4, -4)
-        offset = pygame.Vector2(0, 0)
-        anim = self.handle_animation(self.app.dt)
-        anim.flip = self.flip
-        # pygame.draw.rect(surf, (255, 0, 0), (self.pos.x - scroll[0], self.pos.y - scroll[1], self.dimensions.x, self.dimensions.y))
-        # if self.sword.attacking:
-        #     pygame.draw.rect(surf, (255, 0, 0), self.get_attack_rect())
-        if self.mode == "sword":
-            if self.sword.angle > 0:
-                self.sword.draw(surf, scroll)
-                anim.draw(surf, scroll, (self.pos.x + offset.x, self.pos.y + offset.y))
-            else:
+        if not self.dead:
+            self.sword.offset = (-4, -4)
+            offset = pygame.Vector2(0, 0)
+            anim = self.handle_animation(self.app.dt)
+            anim.flip = self.flip
+            # pygame.draw.rect(surf, (255, 0, 0), (self.pos.x - scroll[0], self.pos.y - scroll[1], self.dimensions.x, self.dimensions.y))
+            # if self.sword.attacking:
+            # pygame.draw.rect(surf, (255, 0, 0), self.get_attack_rect())
+            if self.mode == "sword":
+                if self.sword.angle > 0:
+                    self.sword.draw(surf, scroll)
+                    anim.draw(surf, scroll, (self.pos.x + offset.x, self.pos.y + offset.y))
+                else:
+                    anim.draw(surf, scroll, self.pos + offset)
+                    self.sword.draw(surf, scroll)
+            elif self.mode == "shotgun":
                 anim.draw(surf, scroll, self.pos + offset)
-                self.sword.draw(surf, scroll)
-        elif self.mode == "shotgun":
-            anim.draw(surf, scroll, self.pos + offset)
-            self.shotgun.draw(surf, scroll)
-        elif self.mode == "pepper":
-            anim.draw(surf, scroll, self.pos + offset)
-            self.pepper.draw(surf, scroll)
+                self.shotgun.draw(surf, scroll)
+            elif self.mode == "pepper":
+                anim.draw(surf, scroll, self.pos + offset)
+                self.pepper.draw(surf, scroll)
+            else:
+                if self.attacking:
+                    offset = pygame.Vector2(-9, 0)
+                anim.draw(surf, scroll, self.pos + offset)
         else:
-            if self.attacking:
-                offset = pygame.Vector2(-9, 0)
-            anim.draw(surf, scroll, self.pos + offset)
+            deg = self.get_dead_angle()
+            
+            img_copy = pygame.transform.rotate(self.img, deg)
+
+            midpoint = self.get_dead_midpoint()
+            
+            surf.blit(img_copy, (midpoint.x - (img_copy.get_width() / 2) - scroll[0], midpoint.y - (img_copy.get_height() / 2) - scroll[1]))
+            if self.mode == "shotgun":
+                self.shotgun.draw(surf, scroll)
+            elif self.mode == "pepper":
+                self.pepper.draw(surf, scroll)
         # self.sword.draw_slash(surf, scroll)

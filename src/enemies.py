@@ -4,6 +4,8 @@ from .bip import *
 from .sparks import *
 from .particles import *
 
+from .player import Sword, Pepper, Shotgun
+
 BOUNCE = 0.8
 FRICTION = 0.9
 
@@ -25,9 +27,17 @@ class Enemy:
 
         self.img = app.assets["placeholder"].copy()
 
-        self.node_radius = self.dimensions.x * 0.5
+        self.node_radius = self.dimensions.x * 0.35
         self.p1 = {}
         self.p2 = {}
+
+        self.sword = Sword(self.app.assets["player"]["knife"], app, self.pos, self, offset=(0, -5))
+        self.shotgun = Shotgun(self.app.assets["player"]["shotgun"], app, self, (0, -10), player=False)
+        self.pepper = Pepper(self.app.assets["player"]["pepper"], app, self, (0, 0), player=False)
+        self.mode = "pepper"
+
+        self.gravity = 0.3
+        self.friction = 0.7
 
     def get_rect(self):
         return pygame.Rect(self.pos.x, self.pos.y, self.dimensions.x, self.dimensions.y)
@@ -41,26 +51,26 @@ class Enemy:
             force = min(impact.length(), 16)
             p1 = pygame.Vector2(self.pos.x + self.node_radius, self.pos.y + self.node_radius)
             angle = math.atan2(p1.y - impact_point.y, p1.x - impact_point.x)
-            self.p1 = {"x": p1[0], "y": p1[1], "oldx": p1[0] - math.cos(angle) * force, "oldy": p1[1] - math.sin(angle) * force}
+            self.p1 = {"x": p1[0], "y": p1[1], "oldx": p1[0] - math.cos(angle) * force - self.movement.x, "oldy": p1[1] - math.sin(angle) * force - self.movement.y}
             p2 = pygame.Vector2(self.pos.x + self.node_radius, self.pos.y + self.dimensions.y - self.node_radius)
             angle = math.atan2(p2.y - impact_point.y, p2.x - impact_point.x)
-            self.p2 = {"x": p2[0], "y": p2[1], "oldx": p2[0] - math.cos(angle) * force, "oldy": p2[1] - math.sin(angle) * force}
+            self.p2 = {"x": p2[0], "y": p2[1], "oldx": p2[0] - math.cos(angle) * force - self.movement.x, "oldy": p2[1] - math.sin(angle) * force - self.movement.y}
 
             self.app.screen_shake = max(self.app.screen_shake, 16)
             kpos = list(impact_point)
             while self.app.tile_map.solid_check(kpos):
                 kpos[1] -= 2
-            for _ in range(random.randint(40, 60)):
+            for _ in range(random.randint(20, 30)):
                 angle = 2 * math.pi * random.random()
                 speed = random.random() * 4 - 2
                 self.app.kickup.append([list(kpos), [math.cos(angle) * speed, math.sin(angle) * speed * 2], random.random() * 0.05 + 2, random.choice([(237, 82, 89), (196, 44, 54), (120, 31, 44)])])
-            for _ in range(random.randint(20, 30)):
+            for _ in range(random.randint(15, 25)):
                 angle = random.random() * math.pi * 2
                 speed = random.random() * 3 + 3
                 self.app.sparks.append(
                     Spark(list(kpos), angle, speed, random.choice([(237, 82, 89), (196, 44, 54)]))
                 )
-            for _ in range(random.randint(50, 60)):
+            for _ in range(random.randint(30, 40)):
                 angle = random.random() * math.pi * 2
                 speed = random.random() * 5
                 self.app.particles.append(Particle(self.app, 'particle', list(kpos), [math.cos(angle + math.pi) * speed * 0.5, math.sin(angle + math.pi) * speed * 0.5], random.randint(0, 7)))
@@ -84,6 +94,14 @@ class Enemy:
                 self.app.smoke.append([list(kpos),[math.cos(angle) * speed, math.sin(angle) * speed], 1, random.randint(200, 255), 0, random.randint(0, 360), random.choice([(237, 82, 89), (196, 44, 54), (120, 31, 44)])])
 
     def update(self, dt):
+        if self.mode == "sword":
+            self.sword.update()
+        elif self.mode == "shotgun":
+            self.shotgun.angle = math.atan2(-(self.app.player.get_rect().centery - self.get_rect().centery), self.app.player.get_rect().centerx - self.get_rect().centerx) - math.pi * 0.5
+            self.shotgun.flipped = self.app.player.get_rect().centerx > self.get_rect().centerx
+            self.shotgun.update()
+        elif self.mode == "pepper":
+            self.pepper.update()
         if self.dead:
             # print(self.get_dead_midpoint())
             # print(self.p1, self.p2)
@@ -102,6 +120,11 @@ class Enemy:
 
             dx, dy = self.p1['x'] - self.p2['x'], self.p1['y'] - self.p2['y']
             distance = math.sqrt(dx ** 2 + dy ** 2)
+            if distance < 0.1:
+                self.p1['x'] += random.choice([-1, 1])
+                self.p2['y'] += random.choice([-1, 1])
+                dx, dy = self.p1['x'] - self.p2['x'], self.p1['y'] - self.p2['y']
+                distance = math.sqrt(dx ** 2 + dy ** 2)
             difference = (self.dimensions.y - self.node_radius * 2) - distance
             percentage = difference / max(0.001, distance) * 0.5
             offset_x = dx * percentage
@@ -124,7 +147,7 @@ class Enemy:
                     distance = math.sqrt(dx ** 2 + dy ** 2)
                     if distance < self.node_radius:
                         if distance == 0:
-                            distance = 0.001
+                            distance = 1
                             dx = self.node_radius
                         overlap = self.node_radius - distance
                         nx = dx / distance
@@ -178,8 +201,11 @@ class Enemy:
                     self.movement.y = 0
                     self.pos.y = r.y
             
-            # update movement
-            self.movement.y += 0.3 * dt
+            # update movemen
+            self.movement.x *= self.friction ** dt
+
+            self.movement.y += self.gravity * dt
+            self.movement.y = min(self.movement.y, 24)
 
             # one more time for dangerous stuff
             r = self.get_rect()
@@ -188,9 +214,12 @@ class Enemy:
                     self.die(pygame.Vector2(0, 0))
                     return
             
-            if self.app.player.sword.attacking:
+            if self.app.player.sword.attacking and self.app.player.mode == "sword":
                 if self.collide_mask(self.app.player.sword.attack_mask, self.app.player.sword.attack_offset):
-                    self.die(pygame.Vector2(5, 5), self.app.player.get_rect().center)
+                    self.die(pygame.Vector2(5, 5), (pygame.Vector2(self.app.player.get_rect().center) + pygame.Vector2(self.get_rect().center)) * 0.5)
+            if self.app.player.mode == "fists" and self.app.player.attacking:
+                if self.get_rect().colliderect(self.app.player.get_attack_rect()):
+                    self.die(pygame.Vector2(5, 5), (pygame.Vector2(self.app.player.get_rect().center) + pygame.Vector2(self.get_rect().center)) * 0.5)
     
     def collide_mask(self, mask, pos):
         self.hurt_mask = pygame.mask.from_surface(self.img)
@@ -227,14 +256,33 @@ class Enemy:
     
     def draw(self, surf, scroll):
         if not self.dead:
-            surf.blit(self.img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
+            if self.mode == "sword":
+                if self.sword.angle > 0:
+                    self.sword.draw(surf, scroll)
+                    surf.blit(self.img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
+                else:
+                    surf.blit(self.img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
+                    self.sword.draw(surf, scroll) 
+            elif self.mode == "shotgun":
+                surf.blit(self.img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
+                self.shotgun.draw(surf, scroll)
+            elif self.mode == "pepper":
+                surf.blit(self.img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
+                self.pepper.draw(surf, scroll)
+            else:
+                surf.blit(self.img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
         else:
             deg = self.get_dead_angle()
             
             img_copy = pygame.transform.rotate(self.img, deg)
 
             midpoint = self.get_dead_midpoint()
-            
+
             surf.blit(img_copy, (midpoint.x - (img_copy.get_width() / 2) - scroll[0], midpoint.y - (img_copy.get_height() / 2) - scroll[1]))
+
+            if self.mode == "shotgun":
+                self.shotgun.draw(surf, scroll)
+            elif self.mode == "pepper":
+                self.shotgun.draw(surf, scroll)
             # pygame.draw.circle(surf, (255, 255, 0), (self.p1['x'], self.p1['y']), self.node_radius)
             # pygame.draw.circle(surf, (255, 255, 0), (self.p2['x'], self.p2['y']), self.node_radius)

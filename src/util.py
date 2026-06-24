@@ -66,6 +66,14 @@ def snip(spritesheet, pos, dimensions):
     image = spritesheet.subsurface(clip_rect)
     return image
 
+def load_imgs(path, dimensions, tile_dimensions):
+    tile_set = load_image(path)
+    images = []
+    for y_pos in range(dimensions[1]):
+        for x_pos in range(dimensions[0]):
+            images.append(snip(tile_set, (x_pos * tile_dimensions[0], y_pos * tile_dimensions[1]), tile_dimensions))
+    return images
+
 def read_json(path):
     f = open(get_script_path() + path, "r")
     data = json.load(f)

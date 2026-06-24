@@ -63,7 +63,9 @@ class App:
             "placeholder": load_image("placeholder.png"),
             "firefly": load_animation("firefly.png", 5, 5, 20),
             "particle/explosion": load_animation("particles/explosion.png", 5, 5, 15),
-            "particle/particle": load_animation("particles/particle.png", 5, 5, 4)
+            "particle/particle": load_animation("particles/particle.png", 5, 5, 4),
+            "clouds": load_imgs("clouds.png", (1, 2), (64, 32)),
+            "background": load_image("background.png")
         }
 
         self.tile_map = TileMap(self)
@@ -95,6 +97,11 @@ class App:
             # [pos, dir, angle]
             self.fireflies.append([[random.random() * 10000, random.random() * 10000], random.random() * math.pi * 2, random.random() * 10 + 10, random.random() * 4 * random.choice([-1, 1]), random.random() * 50])
         self.cinders = PhysicsParticles(self, trail=True, bounce=0.3, explode=True, friction=0.7)
+
+        self.clouds = []
+        for _ in range(6):
+            self.clouds.append([random.random() * 10000, random.random() * 10000, random.choice([0, 1]), random.random() * 0.5 + 0.25])
+        self.clouds.sort(key=lambda x: -x[3])
     
     def update_fireflies(self, scroll):
         for fly in self.fireflies:
@@ -193,6 +200,13 @@ class App:
                         vel = 0.2
                         self.slime.append([list(splat[0]), [math.cos(angle) * vel, math.sin(angle) * vel], splat[2]])
                     splat[3] = -1
+            if self.player.dead:
+                if self.player.particle_check(splat[0])[0]:
+                    for _ in range(5):
+                        angle = random.random() * math.pi * 2
+                        vel = 0.2
+                        self.slime.append([list(splat[0]), [math.cos(angle) * vel, math.sin(angle) * vel], splat[2]])
+                    splat[3] = -1
 
             pygame.draw.circle(self.level_surf, splat[2], [splat[0][0] - render_scroll[0], splat[0][1] - render_scroll[1]], splat[3])
             splat[3] -= 0.001 * self.dt
@@ -244,6 +258,25 @@ class App:
                         enemy.img.set_colorkey(None)
                         enemy.img.blit(img_mask.to_surface(setcolor=(0, 0, 0, 0), unsetcolor=(0, 255, 0)), (0, 0))
                         enemy.img.set_colorkey((0, 255, 0))
+                        drawn = 1
+            if self.player.dead:
+                collide, local_pos = self.player.particle_check(slime[0])
+                if collide:
+                    img_mask = pygame.mask.from_surface(self.player.img)
+                    local_x = max(0, min(self.player.img.get_width() - 1, int(local_pos[0])))
+                    local_y = max(0, min(self.player.img.get_height() - 1, int(local_pos[1])))
+                    if img_mask.get_at((local_x, local_y)):
+                        _, prev_local_pos = self.player.particle_check(prev_pos)
+                        if prev_local_pos is None:
+                            prev_local_pos = local_pos
+                        prev_local_x = max(0, min(self.player.img.get_width() - 1, int(prev_local_pos[0])))
+                        prev_local_y = max(0, min(self.player.img.get_height() - 1, int(prev_local_pos[1])))
+
+                        pygame.draw.line(self.player.img, slime[2], (prev_local_x, prev_local_y), (local_x, local_y))
+
+                        self.player.img.set_colorkey(None)
+                        self.player.img.blit(img_mask.to_surface(setcolor=(0, 0, 0, 0), unsetcolor=(0, 255, 0)), (0, 0))
+                        self.player.img.set_colorkey((0, 255, 0))
                         drawn = 1
             if not drawn:
                 pygame.draw.line(self.level_surf, slime[2], [prev_pos[0] - render_scroll[0], prev_pos[1] - render_scroll[1]], [slime[0][0] - render_scroll[0], slime[0][1] - render_scroll[1]])
@@ -317,10 +350,19 @@ class App:
         self.player.update(self.dt)
         for enemy in self.enemies:
             enemy.update(self.dt)
+            if not self.player.dead and random.random() < 0.005:
+                enemy.pepper.shoot(pygame.Vector2(self.player.get_rect().center) + pygame.Vector2(random.random() * 50 - 25, random.random() * 50 - 25))
 
         # render to screen
         self.screen.fill((14, 130, 206))
-        self.level_surf.fill((14, 130, 206))
+        # self.level_surf.fill((14, 130, 206))
+        self.level_surf.blit(pygame.transform.scale(self.assets["background"], self.level_surf.get_size()), (0, 0))
+
+        for cloud in self.clouds:
+            cloud[0] += self.dt * cloud[3] * 0.1
+            
+            pos = [cloud[0] % (self.level_surf.get_width() + 128) - 64, cloud[1] % (self.level_surf.get_height() * 0.5 + 64) - 32]
+            self.level_surf.blit(self.assets["clouds"][cloud[2]], pos)
 
         screen_shake_offset = (
             (random.random() - 0.5) * self.screen_shake,
@@ -448,6 +490,8 @@ class App:
                         elif self.player.mode == "fists" and not self.player.attacking:
                             self.player.punch.reset()
                             self.player.attacking = True
+                    elif event.key == pygame.K_z:
+                        self.player.die(pygame.Vector2(0, 5), self.player.pos - pygame.Vector2(5, 5))
                 elif event.type == pygame.KEYUP:
                     if event.key in {pygame.K_UP, pygame.K_SPACE, pygame.K_w}:
                         self.player.release_jump()
