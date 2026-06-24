@@ -10,8 +10,9 @@ BOUNCE = 0.8
 FRICTION = 0.9
 
 class Enemy:
-    def __init__(self, app, dimensions, start_pos):
+    def __init__(self, app, dimensions, start_pos, num=0):
         self.app = app
+        self.num = num
         self.dimensions = pygame.Vector2(dimensions)
         self.pos = pygame.Vector2(start_pos)
         
@@ -34,12 +35,12 @@ class Enemy:
         self.sword = Sword(self.app.assets["player"]["knife"], app, self.pos, self, offset=(0, -5))
         self.shotgun = Shotgun(self.app.assets["player"]["shotgun"], app, self, (0, -10), player=False)
         self.pepper = Pepper(self.app.assets["player"]["pepper"], app, self, (0, 0), player=False)
-        self.mode = "sword"
+        self.mode = random.choice(["sword", "shotgun", "pepper"])
 
         self.gravity = 0.3
         self.friction = 0.7
 
-        self.mood = "angry" # possible: passive, angry, panic
+        self.mood = "passive" # possible: passive, angry, panic
         self.wander = 0
         self.wander_dir = round(random.random()) * 2 - 1
 
@@ -99,6 +100,13 @@ class Enemy:
                 angle = math.pi * 2 * random.random()
                 speed = random.random()
                 self.app.smoke.append([list(kpos),[math.cos(angle) * speed, math.sin(angle) * speed], 1, random.randint(200, 255), 0, random.randint(0, 360), random.choice([(237, 82, 89), (196, 44, 54), (120, 31, 44)])])
+            
+            for enemy in self.app.enemies:
+                if enemy.num != self.num:
+                    print(enemy)
+                    if self.pos.distance_squared_to(enemy.pos) < (TILE_SIZE * 10) ** 2:
+                        enemy.mood = random.choice(["panic", "angry"])
+                        print(enemy)
 
     def update(self, dt):
         if self.mode == "sword":
@@ -227,6 +235,10 @@ class Enemy:
                 if rect.colliderect(r):
                     self.die(pygame.Vector2(0, 0))
                     return
+                
+            if self.mood == "angry" and self.sword.attacking and self.mode == "sword" and not self.app.player.attacking and not self.app.player.sword.attacking:
+                if self.app.player.collide_mask(self.sword.attack_mask, self.sword.attack_offset):
+                    self.app.player.die(pygame.Vector2(5, 5), (pygame.Vector2(self.app.player.get_rect().center) + pygame.Vector2(self.get_rect().center)) * 0.5)
             
             if self.app.player.sword.attacking and self.app.player.mode == "sword":
                 if self.collide_mask(self.app.player.sword.attack_mask, self.app.player.sword.attack_offset):
@@ -235,9 +247,16 @@ class Enemy:
                 if self.get_rect().colliderect(self.app.player.get_attack_rect()):
                     self.die(pygame.Vector2(5, 5), (pygame.Vector2(self.app.player.get_rect().center) + pygame.Vector2(self.get_rect().center)) * 0.5)
             
+            if self.app.player.dead:
+                self.mood = "passive"
+            
             if self.mood == "passive":
                 # do idle stuff (chill)
                 self.wander += self.app.dt
+                if self.wander_dir > 0:
+                        self.flip = False
+                elif self.wander_dir < 0:
+                        self.flip = True
                 if self.wander > 240:
                     self.wander = random.random() * 200
                     if abs(self.wander_dir) > 0:
@@ -254,7 +273,9 @@ class Enemy:
                 if self.movement.x < 0:
                     self.flip = True
                 if self.app.tile_map.solid_check((self.get_rect().centerx + TILE_SIZE, self.get_rect().bottom - 1)) or self.app.tile_map.solid_check((self.get_rect().centerx - TILE_SIZE, self.get_rect().bottom - 1)):
-                    self.wander_dir *= -1
+                    if self.wander > 40:
+                        self.wander = 0
+                        self.wander_dir *= -1
             elif self.mood == "panic":
                 self.wander += self.app.dt
                 if self.wander_dir == 0:
@@ -264,7 +285,7 @@ class Enemy:
                     self.flip = True
                 else:
                     self.flip = False
-                if self.app.tile_map.solid_check((self.get_rect().centerx + TILE_SIZE, self.get_rect().bottom - 1)) or self.app.tile_map.solid_check((self.get_rect().centerx - TILE_SIZE, self.get_rect().bottom - 1)) or abs(self.app.player.get_rect().centerx - self.get_rect().centerx) < 50:
+                if self.app.tile_map.solid_check((self.get_rect().centerx + TILE_SIZE, self.get_rect().bottom - 1)) or self.app.tile_map.solid_check((self.get_rect().centerx - TILE_SIZE, self.get_rect().bottom - 1)) or (abs(self.app.player.get_rect().centerx - self.get_rect().centerx) < 50 and abs(self.app.player.get_rect().centery - self.get_rect().centery) < 64):
                     if self.wander > 40:
                         self.wander = 0
                         self.wander_dir *= -1
@@ -359,19 +380,22 @@ class Enemy:
     def draw(self, surf, scroll):
         img = pygame.transform.flip(self.img, self.flip, False)
         if not self.dead:
-            if self.mode == "sword":
-                if self.sword.angle > 0:
-                    self.sword.draw(surf, scroll)
+            if self.mood == "angry":
+                if self.mode == "sword":
+                    if self.sword.angle > 0:
+                        self.sword.draw(surf, scroll)
+                        surf.blit(img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
+                    else:
+                        surf.blit(img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
+                        self.sword.draw(surf, scroll) 
+                elif self.mode == "shotgun":
                     surf.blit(img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
+                    self.shotgun.draw(surf, scroll)
+                elif self.mode == "pepper":
+                    surf.blit(img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
+                    self.pepper.draw(surf, scroll)
                 else:
                     surf.blit(img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
-                    self.sword.draw(surf, scroll) 
-            elif self.mode == "shotgun":
-                surf.blit(img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
-                self.shotgun.draw(surf, scroll)
-            elif self.mode == "pepper":
-                surf.blit(img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
-                self.pepper.draw(surf, scroll)
             else:
                 surf.blit(img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
         else:

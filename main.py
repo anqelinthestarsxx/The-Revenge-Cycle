@@ -78,7 +78,7 @@ class App:
         for loc in self.tile_map.tile_map.copy():
             if self.tile_map.tile_map[loc]["type"] == "enemy":
                 tile = self.tile_map.tile_map[loc]
-                self.enemies.append(Enemy(self, [15, 31], [self.tile_map.tile_map[loc]["pos"][0] * TILE_SIZE, self.tile_map.tile_map[loc]["pos"][1] * TILE_SIZE]))
+                self.enemies.append(Enemy(self, [15, 31], [self.tile_map.tile_map[loc]["pos"][0] * TILE_SIZE, self.tile_map.tile_map[loc]["pos"][1] * TILE_SIZE], num=len(self.enemies)))
                 del self.tile_map.tile_map[loc]
 
         self.scroll = pygame.Vector2(0, 0)
@@ -202,6 +202,7 @@ class App:
                         vel = 0.2
                         self.slime.append([list(splat[0]), [math.cos(angle) * vel, math.sin(angle) * vel], splat[2]])
                     splat[3] = -1
+
             if self.player.dead:
                 if self.player.particle_check(splat[0])[0]:
                     for _ in range(5):
