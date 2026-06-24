@@ -47,6 +47,14 @@ class Enemy:
         self.last_node = self.app.tile_map.get_closest_node_id(self.get_rect().center)
         self.recalc = 0
 
+        self.hurt_mask = None
+        self.hurt_mask = pygame.mask.from_surface(self.img)
+        self.mask_surf = self.hurt_mask.to_surface(setcolor=(0, 0, 0, 0), unsetcolor=(0, 255, 0))
+
+        self.scribble_surf = pygame.Surface(self.img.get_size(), pygame.SRCALPHA).convert_alpha()
+        self.scribble_surf.blit(self.mask_surf, (0, 0))
+        self.scribble_surf.set_colorkey((0, 255, 0))
+
         self.pause_time = 0
 
     def get_rect(self):
@@ -57,6 +65,8 @@ class Enemy:
             impact = pygame.Vector2(impact)
             impact_point = pygame.Vector2(impact_point)
             self.dead = True
+
+            self.app.slomo = 0.1
 
             force = min(impact.length(), 16)
             p1 = pygame.Vector2(self.pos.x + self.node_radius, self.pos.y + self.node_radius)
@@ -132,9 +142,9 @@ class Enemy:
                 vels.append((vx, vy))
                 p['oldx'] = p['x']
                 p['oldy'] = p['y']
-                p['x'] += vx * dt
-                p['y'] += vy * dt
-                p['y'] += 2 * dt * dt
+                p['x'] += vx
+                p['y'] += vy
+                p['y'] += 2 
 
             dx, dy = self.p1['x'] - self.p2['x'], self.p1['y'] - self.p2['y']
             distance = math.sqrt(dx ** 2 + dy ** 2)
@@ -241,14 +251,14 @@ class Enemy:
                 
             if self.mood == "angry" and self.sword.attacking and self.mode == "sword" and not self.app.player.attacking and not self.app.player.sword.attacking:
                 if self.app.player.collide_mask(self.sword.attack_mask, self.sword.attack_offset):
-                    self.app.player.die(pygame.Vector2(5, 5), (pygame.Vector2(self.app.player.get_rect().center) + pygame.Vector2(self.get_rect().center)) * 0.5)
+                    self.app.player.die(pygame.Vector2(2, 2), (pygame.Vector2(self.app.player.get_rect().center) + pygame.Vector2(self.get_rect().center)) * 0.5)
             
             if self.app.player.sword.attacking and self.app.player.mode == "sword":
                 if self.collide_mask(self.app.player.sword.attack_mask, self.app.player.sword.attack_offset):
-                    self.die(pygame.Vector2(5, 5), (pygame.Vector2(self.app.player.get_rect().center) + pygame.Vector2(self.get_rect().center)) * 0.5)
+                    self.die(pygame.Vector2(2, 2), (pygame.Vector2(self.app.player.get_rect().center) + pygame.Vector2(self.get_rect().center)) * 0.5)
             if self.app.player.mode == "fists" and self.app.player.attacking:
                 if self.get_rect().colliderect(self.app.player.get_attack_rect()):
-                    self.die(pygame.Vector2(5, 5), (pygame.Vector2(self.app.player.get_rect().center) + pygame.Vector2(self.get_rect().center)) * 0.5)
+                    self.die(pygame.Vector2(2, 2), (pygame.Vector2(self.app.player.get_rect().center) + pygame.Vector2(self.get_rect().center)) * 0.5)
             
             if self.app.player.dead:
                 self.mood = "passive"
@@ -361,7 +371,8 @@ class Enemy:
                 
     
     def collide_mask(self, mask, pos):
-        self.hurt_mask = pygame.mask.from_surface(self.img)
+        if not self.hurt_mask:
+            self.hurt_mask = pygame.mask.from_surface(self.img)
         offset = (pos[0] - self.pos.x, pos[1] - self.pos.y)
         return self.hurt_mask.overlap(mask, offset)
 
@@ -395,6 +406,9 @@ class Enemy:
     
     def draw(self, surf, scroll):
         img = pygame.transform.flip(self.img, self.flip, False)
+        self.scribble_surf.blit(self.mask_surf, (0, 0))
+        self.scribble_surf.set_colorkey((0, 255, 0))
+        img.blit(pygame.transform.flip(self.scribble_surf, self.flip, False), (0, 0))
         if not self.dead:
             if self.mood == "angry":
                 if self.mode == "sword":

@@ -5,7 +5,7 @@ from src.bip import *
 # window dimensions
 SCR_WIDTH = 2100
 SCR_HEIGHT = 1200
-SCALE = 3 # screen scaling
+SCALE = 2 # screen scaling
 
 # json map path
 MAP = "data/maps/1.json"

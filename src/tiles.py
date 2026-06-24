@@ -32,13 +32,17 @@ class TileMap:
             try:
                 img = self.app.assets[f"tiles/{tile['type']}"][tile["variant"]].copy()
             except KeyError:
+                print(tile)
                 pass
             self.tile_map[tile_loc] = {
                 "type": tile["type"],
                 "variant": tile["variant"],
                 "pos": tile["pos"],
-                "img": img
+                "img": img,
+                "mask": pygame.mask.from_surface(img) if img else None,
             }
+            if img != None:
+                self.tile_map[tile_loc]["mask_surf"] = self.tile_map[tile_loc]["mask"].to_surface(setcolor=(0, 0, 0, 0), unsetcolor=(255, 0, 0))
 
         # load off grid tiles
         self.off_grid.extend(data["level"]["off_grid"])

@@ -104,6 +104,8 @@ class App:
         for _ in range(6):
             self.clouds.append([random.random() * 10000, random.random() * 10000, random.choice([0, 1]), random.random() * 0.5 + 0.25])
         self.clouds.sort(key=lambda x: -x[3])
+
+        self.slomo = 1.0
     
     def update_fireflies(self, scroll):
         for fly in self.fireflies:
@@ -175,20 +177,14 @@ class App:
         return (surf, (smoke[0][0] - surf.get_width() * 0.5 - render_scroll[0], smoke[0][1] - surf.get_height() * 0.5 - render_scroll[1]))
     
     def update_slime(self, render_scroll):
+        slime_width = 2
         for splat in self.splat.copy():
             splat[0][0] += splat[1][0] * self.dt
-            if self.tile_map.solid_check(splat[0]):
-                for _ in range(5):
-                    angle = random.random() * math.pi * 2
-                    vel = 0.2
-                    self.slime.append([list(splat[0]), [math.cos(angle) * vel, math.sin(angle) * vel], splat[2]])
-                splat[3] = -1
             splat[0][1] += splat[1][1] * self.dt
             if self.tile_map.solid_check(splat[0]):
-                for _ in range(5):
-                    angle = random.random() * math.pi * 2
-                    vel = 0.2
-                    self.slime.append([list(splat[0]), [math.cos(angle) * vel, math.sin(angle) * vel], splat[2]])
+                angle = random.random() * math.pi * 2
+                vel = 0.2
+                self.slime.append([list(splat[0]), [math.cos(angle) * vel, math.sin(angle) * vel], splat[2]])
                 splat[3] = -1
             splat[1][1] += 0.14 * self.dt
             splat[1][0] += (splat[1][0] * 0.995 - splat[1][0]) * self.dt
@@ -196,20 +192,23 @@ class App:
             splat_circle = pygame.geometry.Circle(splat[0][0], splat[0][1], max(1, splat[3]))
 
             for enemy in self.enemies:
+                big_rect = pygame.Rect(enemy.pos.x - TILE_SIZE, enemy.pos.y - TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                if not big_rect.collidepoint(splat[0]):
+                    continue
                 if enemy.particle_check(splat[0])[0]:
-                    for _ in range(5):
-                        angle = random.random() * math.pi * 2
-                        vel = 0.2
-                        self.slime.append([list(splat[0]), [math.cos(angle) * vel, math.sin(angle) * vel], splat[2]])
+                    angle = random.random() * math.pi * 2
+                    vel = 0.2
+                    self.slime.append([list(splat[0]), [math.cos(angle) * vel, math.sin(angle) * vel], splat[2]])
                     splat[3] = -1
 
             if self.player.dead:
-                if self.player.particle_check(splat[0])[0]:
-                    for _ in range(5):
-                        angle = random.random() * math.pi * 2
+                big_rect = pygame.Rect(self.player.pos.x - TILE_SIZE, self.player.pos.y - TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                if big_rect.collidepoint(splat[0]):
+                    if self.player.particle_check(splat[0])[0]:
+                        angle = random.random() * mathpi * 2
                         vel = 0.2
                         self.slime.append([list(splat[0]), [math.cos(angle) * vel, math.sin(angle) * vel], splat[2]])
-                    splat[3] = -1
+                        splat[3] = -1
 
             pygame.draw.circle(self.level_surf, splat[2], [splat[0][0] - render_scroll[0], splat[0][1] - render_scroll[1]], splat[3])
             splat[3] -= 0.001 * self.dt
@@ -226,60 +225,58 @@ class App:
             if tile_loc in self.tile_map.tile_map:
                 target_tile = self.tile_map.tile_map[tile_loc]
                 if target_tile["type"] in PHYSICS_TILES:
-                    img_mask = pygame.mask.from_surface(target_tile["img"])
                     tile_x = math.floor(slime[0][0] / TILE_SIZE) * TILE_SIZE
                     tile_y = math.floor(slime[0][1] / TILE_SIZE) * TILE_SIZE
                     prev_img_pos = (prev_pos[0] - tile_x, prev_pos[1] - tile_y)
                     img_pos = (slime[0][0] - tile_x, slime[0][1] - tile_y)
-                    pygame.draw.line(target_tile["img"], slime[2], prev_img_pos, img_pos)
+                    pygame.draw.line(target_tile["img"], slime[2], prev_img_pos, img_pos, width=slime_width)
                     try:
-                        if 0 < img_pos[0] < TILE_SIZE - 1 and 0 < img_pos[1] < TILE_SIZE - 2:
-                            if not (target_tile["img"].get_at((img_pos[0], img_pos[1] + 1)) == slime[2]):
-                                target_tile["img"].set_at((img_pos[0], img_pos[1] + 1), (20, 16, 32))
+                        if 0 < img_pos[0] < TILE_SIZE - 1 and 0 < img_pos[1] < TILE_SIZE - slime_width - 1:
+                            if not (target_tile["img"].get_at((img_pos[0], img_pos[1] + slime_width)) == slime[2]):
+                                target_tile["img"].set_at((img_pos[0], img_pos[1] + slime_width), (20, 16, 32))
                     except IndexError:
                         pass
                         
-                    target_tile["img"].set_colorkey(None)
-                    target_tile["img"].blit(img_mask.to_surface(setcolor=(0, 0, 0, 0), unsetcolor=(0, 255, 0)), (0, 0))
+                    target_tile["img"].blit(target_tile["mask_surf"])
                     target_tile["img"].set_colorkey((0, 255, 0))
                     drawn = 1
             for enemy in self.enemies:
+                big_rect = pygame.Rect(enemy.pos.x - TILE_SIZE, enemy.pos.y - TILE_SIZE, TILE_SIZE * 3, TILE_SIZE * 3)
+                if not big_rect.collidepoint(slime[0]):
+                    continue
                 collide, local_pos = enemy.particle_check(slime[0])
                 if collide:
-                    img_mask = pygame.mask.from_surface(enemy.img)
-                    local_x = max(0, min(enemy.img.get_width() - 1, int(local_pos[0])))
-                    local_y = max(0, min(enemy.img.get_height() - 1, int(local_pos[1])))
+                    img_mask = enemy.hurt_mask
+                    local_x = max(0, min(enemy.scribble_surf.get_width() - 1, int(local_pos[0])))
+                    local_y = max(0, min(enemy.scribble_surf.get_height() - 1, int(local_pos[1])))
                     if img_mask.get_at((local_x, local_y)):
                         _, prev_local_pos = enemy.particle_check(prev_pos)
                         if prev_local_pos is None:
                             prev_local_pos = local_pos
-                        prev_local_x = max(0, min(enemy.img.get_width() - 1, int(prev_local_pos[0])))
-                        prev_local_y = max(0, min(enemy.img.get_height() - 1, int(prev_local_pos[1])))
+                        prev_local_x = max(0, min(enemy.scribble_surf.get_width() - 1, int(prev_local_pos[0])))
+                        prev_local_y = max(0, min(enemy.scribble_surf.get_height() - 1, int(prev_local_pos[1])))
 
-                        pygame.draw.line(enemy.img, slime[2], (prev_local_x, prev_local_y), (local_x, local_y))
+                        pygame.draw.line(enemy.scribble_surf, slime[2], (prev_local_x, prev_local_y), (local_x, local_y), width=slime_width)
 
-                        enemy.img.set_colorkey(None)
-                        enemy.img.blit(img_mask.to_surface(setcolor=(0, 0, 0, 0), unsetcolor=(0, 255, 0)), (0, 0))
-                        enemy.img.set_colorkey((0, 255, 0))
                         drawn = 1
             if self.player.dead:
                 collide, local_pos = self.player.particle_check(slime[0])
                 if collide:
-                    img_mask = pygame.mask.from_surface(self.player.img)
-                    local_x = max(0, min(self.player.img.get_width() - 1, int(local_pos[0])))
-                    local_y = max(0, min(self.player.img.get_height() - 1, int(local_pos[1])))
+                    img_mask = self.player.hurt_mask
+                    local_x = max(0, min(self.player.scribble_surf.get_width() - 1, int(local_pos[0])))
+                    local_y = max(0, min(self.player.scribble_surf.get_height() - 1, int(local_pos[1])))
                     if img_mask.get_at((local_x, local_y)):
                         _, prev_local_pos = self.player.particle_check(prev_pos)
                         if prev_local_pos is None:
                             prev_local_pos = local_pos
-                        prev_local_x = max(0, min(self.player.img.get_width() - 1, int(prev_local_pos[0])))
-                        prev_local_y = max(0, min(self.player.img.get_height() - 1, int(prev_local_pos[1])))
+                        prev_local_x = max(0, min(self.player.scribble_surf.get_width() - 1, int(prev_local_pos[0])))
+                        prev_local_y = max(0, min(self.player.scribble_surf.get_height() - 1, int(prev_local_pos[1])))
 
-                        pygame.draw.line(self.player.img, slime[2], (prev_local_x, prev_local_y), (local_x, local_y))
+                        pygame.draw.line(self.player.scribble_surf, slime[2], (prev_local_x, prev_local_y), (local_x, local_y), width=slime_width)
 
-                        self.player.img.set_colorkey(None)
-                        self.player.img.blit(img_mask.to_surface(setcolor=(0, 0, 0, 0), unsetcolor=(0, 255, 0)), (0, 0))
-                        self.player.img.set_colorkey((0, 255, 0))
+                        # self.player.img.set_colorkey(None)
+                        # self.player.img.blit(img_mask.to_surface(setcolor=(0, 0, 0, 0), unsetcolor=(0, 255, 0)), (0, 0))
+                        # self.player.img.set_colorkey((0, 255, 0))
                         drawn = 1
             if not drawn:
                 pygame.draw.line(self.level_surf, slime[2], [prev_pos[0] - render_scroll[0], prev_pos[1] - render_scroll[1]], [slime[0][0] - render_scroll[0], slime[0][1] - render_scroll[1]])
@@ -525,7 +522,8 @@ class App:
             
             # delta time
             self.dt = (time.time() - self.last_time) * 60
-            self.dt = min(self.dt, 3) # if you're under 20 fps you're screwed anyway
+            self.slomo = min(1.0, self.slomo + max(0.01, (1.0 - self.slomo) * 0.08) * self.dt)
+            self.dt = min(self.dt, 3) * self.slomo # if you're under 20 fps you're screwed anyway
             self.last_time = time.time()
 
             self.update()
@@ -536,6 +534,7 @@ class App:
             self.ctx.clear(0, 0, 0)
             self.screenTex.use(0)
             self.lightTex.use(1)
+            self.prog["tintFactor"] = self.slomo * 0.25 + 0.75
             self.tileTex.use(2)
             self.vao.render(moderngl.TRIANGLE_STRIP) # render screen quad
 

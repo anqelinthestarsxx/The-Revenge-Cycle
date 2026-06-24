@@ -17,7 +17,8 @@ uniform float levelW;
 uniform float levelH;
 uniform float levelScale;
 
-uniform vec3 tint = vec3(1.0);
+uniform vec3 tint = vec3(0.7686, 0.1725, 0.21176);
+uniform float tintFactor = 1.0;
 
 void main() {
   vec2 scrUV = TexCoord * vec2(scrWidth, scrHeight);
@@ -59,6 +60,6 @@ void main() {
     light = vec3(1.0);
   }
 
-  vec3 diffuse = mix(tint, tex.rgb * light, 1.0);
+  vec3 diffuse = mix(tint, tex.rgb * light, tintFactor);
   FragColor = vec4(diffuse, 1.0);
 }
