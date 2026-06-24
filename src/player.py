@@ -26,7 +26,7 @@ class Pepper:
         self.peppers = []
 
         self.gravity = 0.4
-        self.explode_radius = 16
+        self.explode_radius = 4
 
         self.player = player
     
@@ -42,9 +42,9 @@ class Pepper:
             angle = math.pi * 2 * random.random()
             speed = random.random() * 0.5 + 0.25
             self.app.smoke.append([list(pos),[math.cos(angle) * speed, math.sin(angle) * speed], 1, random.randint(200, 255), 0, random.randint(0, 360), random.choice([(163, 172, 190)])])
-        kpos = list(pos)
+        kpos = pygame.Vector2(pos)
         while self.app.tile_map.solid_check(kpos):
-            kpos[1] -= 2
+            kpos -= pygame.Vector2(vel) * 0.2
         for _ in range(random.randint(40, 60)):
             angle = 2 * math.pi * random.random()
             speed = random.random() * 4 - 2

@@ -47,6 +47,8 @@ class Enemy:
         self.last_node = self.app.tile_map.get_closest_node_id(self.get_rect().center)
         self.recalc = 0
 
+        self.pause_time = 0
+
     def get_rect(self):
         return pygame.Rect(self.pos.x, self.pos.y, self.dimensions.x, self.dimensions.y)
     
@@ -103,10 +105,11 @@ class Enemy:
             
             for enemy in self.app.enemies:
                 if enemy.num != self.num:
-                    print(enemy)
-                    if self.pos.distance_squared_to(enemy.pos) < (TILE_SIZE * 10) ** 2:
-                        enemy.mood = random.choice(["panic", "angry"])
-                        print(enemy)
+                    if self.pos.distance_squared_to(enemy.pos) < (TILE_SIZE * 10) ** 2 and enemy.mood != "angry":
+                        if enemy.mood == "panic":
+                            enemy.mood = "angry"
+                        else:
+                            enemy.mood = random.choice(["panic", "angry"])
 
     def update(self, dt):
         if self.mode == "sword":
@@ -302,6 +305,19 @@ class Enemy:
                     pass
     
     def follow_player(self):
+        self.pause_time += self.app.dt
+        pause = False
+        if self.pause_time > 150:
+            self.pause_time = random.random() * 60
+            pause = True
+        
+        if pause:
+            if self.mode == "shotgun":
+                self.shotgun.shoot()
+                return
+            elif self.mode == "pepper":
+                self.pepper.shoot(self.app.player.get_rect().center, speed=7)
+            
         self.recalc += self.app.dt
         if self.recalc > 120:
             self.last_node = self.app.tile_map.get_closest_node_id(self.get_rect().center)
