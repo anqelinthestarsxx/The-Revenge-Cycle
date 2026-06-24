@@ -8,7 +8,7 @@ SCR_HEIGHT = 1200
 SCALE = 3 # screen scaling
 
 # json map path
-MAP = "data/maps/0.json"
+MAP = "data/maps/1.json"
 
 # tile sets that can be autotiled
 AUTO_TILE_TYPES = {"grass", "kitchen", "wood"}
@@ -42,6 +42,7 @@ class Editor:
         self.tile_map = {}
         self.off_grid = []
         self.anchors = []
+        self.path_nodes = []
         self.load(MAP)
 
         # assets
@@ -75,6 +76,9 @@ class Editor:
         # flag if tile to place is on or off the grid
         self.grid = True
 
+
+        self.mode = "normal"
+
     # create new level
     def create_new(self, path):
         f = open(path, "w")
@@ -93,6 +97,7 @@ class Editor:
 
             self.tile_map = {}
             self.off_grid = []
+            self.path_nodes = []
 
             print(f"Loading level data from `{path}`")
 
@@ -105,6 +110,9 @@ class Editor:
             self.off_grid.extend(data["level"]["off_grid"])
             for tile in self.off_grid:
                 tile["type"] = tile["type"]
+            
+            self.path_nodes.extend(data["level"]["path_nodes"] if "path_nodes" in data["level"] else [])
+            
 
         # if map doesn't exist, create new one
         except FileNotFoundError:
@@ -131,6 +139,7 @@ class Editor:
                     "level": {
                         "tiles": tiles,
                         "off_grid": off_grid,
+                        "path_nodes": self.path_nodes
                     }
                 },
                 f,
@@ -289,6 +298,7 @@ class Editor:
 
         if self.click and self.grid:
             # if 0 <= mouse_pos[0] < LEVEL_WIDTH * CHUNK_SIZE and 0 <= mouse_pos[1] < LEVEL_HEIGHT * CHUNK_SIZE:
+            if self.mode == "normal":
                 tile_loc = f"{mouse_pos[0]};{mouse_pos[1]}"
                 if tile_loc in self.tile_map:
                     if (
@@ -300,6 +310,8 @@ class Editor:
                         self.tile_map[tile_loc] = {"type": self.tile_list[self.tile_type], "variant": self.tile_variant}
                 else:
                     self.tile_map[tile_loc] = {"type": self.tile_list[self.tile_type], "variant": self.tile_variant}
+            elif self.mode == "node":
+                self.path_nodes.append(list(mouse_pos))
         if self.right_click and self.grid:
             # if 0 <= mouse_pos[0] < LEVEL_WIDTH * CHUNK_SIZE and 0 <= mouse_pos[1] < LEVEL_HEIGHT * CHUNK_SIZE:
                 tile_loc = f"{mouse_pos[0]};{mouse_pos[1]}"
@@ -310,6 +322,8 @@ class Editor:
         self.screen.fill((0, 0, 0))
         self.draw_grid()
         self.draw_tiles()
+        for node in self.path_nodes:
+            pygame.draw.circle(self.screen, (255, 255, 255), (node[0] * TILE_SIZE - self.scroll[0] + TILE_SIZE * 0.5, node[1] * TILE_SIZE - self.scroll[1] + TILE_SIZE * 0.5), TILE_SIZE * 0.5)
         mouse_pos = pygame.mouse.get_pos()
         if self.grid:
             mouse_pos = [
@@ -369,6 +383,10 @@ class Editor:
                             math.floor((mouse_pos[1] / SCALE + self.scroll.y) / TILE_SIZE)
                         ]
                         self.flood_fill(mouse_pos)
+                    elif event.key == pygame.K_j:
+                        self.mode = "node"
+                    elif event.key == pygame.K_n:
+                        self.mode = "normal"
                 elif event.type == pygame.KEYUP:
                     if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                         self.controls["right"] = False

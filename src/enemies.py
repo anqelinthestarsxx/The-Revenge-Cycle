@@ -34,14 +34,17 @@ class Enemy:
         self.sword = Sword(self.app.assets["player"]["knife"], app, self.pos, self, offset=(0, -5))
         self.shotgun = Shotgun(self.app.assets["player"]["shotgun"], app, self, (0, -10), player=False)
         self.pepper = Pepper(self.app.assets["player"]["pepper"], app, self, (0, 0), player=False)
-        self.mode = "pepper"
+        self.mode = "sword"
 
         self.gravity = 0.3
         self.friction = 0.7
 
-        self.mood = "panic" # possible: passive, angry, panic
+        self.mood = "angry" # possible: passive, angry, panic
         self.wander = 0
         self.wander_dir = round(random.random()) * 2 - 1
+
+        self.last_node = self.app.tile_map.get_closest_node_id(self.get_rect().center)
+        self.recalc = 0
 
     def get_rect(self):
         return pygame.Rect(self.pos.x, self.pos.y, self.dimensions.x, self.dimensions.y)
@@ -265,10 +268,60 @@ class Enemy:
                     if self.wander > 40:
                         self.wander = 0
                         self.wander_dir *= -1
-                
             elif self.mood == "angry":
-                pass
-            
+                self.follow_player()
+                if self.mode == "sword":
+                    # follow player
+                    pass
+                elif self.mode == "shotgun":
+                    # follow player until certain distance then shoot
+                    pass
+                elif self.mode == "pepper":
+                    # same as sword but fire occasionally
+                    pass
+    
+    def follow_player(self):
+        self.recalc += self.app.dt
+        if self.recalc > 120:
+            self.last_node = self.app.tile_map.get_closest_node_id(self.get_rect().center)
+            self.recalc = 0
+        tree_dir = 0
+        if self.last_node < self.app.player.current_node:
+            tree_dir = 1
+        elif self.last_node > self.app.player.current_node:
+            tree_dir = -1
+
+        gcx = self.get_rect().centerx
+        gcy = self.get_rect().top
+        speed = 0.5
+        if tree_dir == 0:
+            # follow player directly
+            pcx = self.app.player.get_rect().centerx
+            if abs(pcx - gcx) > TILE_SIZE:
+                if pcx > gcx:
+                    self.movement.x += speed * self.app.dt
+                    self.flip = False
+                else:
+                    self.movement.x -= speed * self.app.dt
+                    self.flip = True
+            elif self.mode == "sword":
+                if self.sword.attacked > 12:
+                    self.sword.attack(  )
+                self.sword.update()
+        else:
+            target_node = self.app.tile_map.path_nodes[self.last_node + tree_dir]
+            if gcx > target_node[0]:
+                self.movement.x -= speed * self.app.dt
+                self.flip = True
+            else:
+                self.movement.x += speed * self.app.dt
+                self.flip = False
+            if gcy > target_node[1]:
+                if self.falling < 3:
+                    self.movement.y = -5
+            if pygame.geometry.Circle(target_node[0], target_node[1], TILE_SIZE).colliderect(self.get_rect()):
+                self.last_node += tree_dir
+                
     
     def collide_mask(self, mask, pos):
         self.hurt_mask = pygame.mask.from_surface(self.img)
@@ -304,26 +357,27 @@ class Enemy:
         return False, None
     
     def draw(self, surf, scroll):
+        img = pygame.transform.flip(self.img, self.flip, False)
         if not self.dead:
             if self.mode == "sword":
                 if self.sword.angle > 0:
                     self.sword.draw(surf, scroll)
-                    surf.blit(self.img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
+                    surf.blit(img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
                 else:
-                    surf.blit(self.img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
+                    surf.blit(img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
                     self.sword.draw(surf, scroll) 
             elif self.mode == "shotgun":
-                surf.blit(self.img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
+                surf.blit(img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
                 self.shotgun.draw(surf, scroll)
             elif self.mode == "pepper":
-                surf.blit(self.img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
+                surf.blit(img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
                 self.pepper.draw(surf, scroll)
             else:
-                surf.blit(self.img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
+                surf.blit(img, (self.pos.x - scroll[0], self.pos.y - scroll[1]))
         else:
             deg = self.get_dead_angle()
             
-            img_copy = pygame.transform.rotate(self.img, deg)
+            img_copy = pygame.transform.rotate(img, deg)
 
             midpoint = self.get_dead_midpoint()
 

@@ -71,20 +71,20 @@ class App:
         }
 
         self.tile_map = TileMap(self)
-        self.tile_map.load("data/maps/0.json")
+        self.tile_map.load("data/maps/1.json")
 
         # extract enemies
         self.enemies = []
         for loc in self.tile_map.tile_map.copy():
             if self.tile_map.tile_map[loc]["type"] == "enemy":
                 tile = self.tile_map.tile_map[loc]
-                self.enemies.append(Enemy(self, [15, 31], [self.tile_map.tile_map[loc]["pos"][0] * TILE_SIZE, self.tile_map.tile_map[loc]["pos"][1] * TILE_SIZE - 100]))
+                self.enemies.append(Enemy(self, [15, 31], [self.tile_map.tile_map[loc]["pos"][0] * TILE_SIZE, self.tile_map.tile_map[loc]["pos"][1] * TILE_SIZE]))
                 del self.tile_map.tile_map[loc]
 
         self.scroll = pygame.Vector2(0, 0)
         self.screen_shake = 0
 
-        self.player = Player(self, [15, 31], [20, 50], "black")
+        self.player = Player(self, [9, 31], [20, 50], "black")
 
         self.particles = []
         self.wind = ([0, 10], [0, 15], [0, 5])
@@ -519,6 +519,8 @@ class App:
                     elif self.player.mode == "fists" and not self.player.attacking:
                         self.player.punch.reset()
                         self.player.attacking = True
+                elif event.type in {pygame.WINDOWEXPOSED, pygame.WINDOWMOVED, pygame.WINDOWRESIZED}:
+                    self.last_time = time.time()
             
             # delta time
             self.dt = (time.time() - self.last_time) * 60

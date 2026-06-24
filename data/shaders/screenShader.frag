@@ -21,15 +21,17 @@ uniform vec3 tint = vec3(1.0);
 
 void main() {
   vec2 scrUV = TexCoord * vec2(scrWidth, scrHeight);
+  vec2 texelSize = vec2(1.0 / scrWidth, 1.0 / scrHeight);
   vec2 levelMin = vec2(levelX, levelY);
   vec2 levelMax = levelMin + vec2(levelW, levelH);
-  if (scrUV.x < levelMin.x || scrUV.y < levelMin.y || scrUV.x >= levelMax.x ||
-      scrUV.y >= levelMax.y) {
+  if (scrUV.x < levelMin.x + texelSize.x ||
+      scrUV.y < levelMin.y + texelSize.y ||
+      scrUV.x >= levelMax.x - texelSize.x ||
+      scrUV.y >= levelMax.y - texelSize.y) {
     FragColor = vec4(0.0, 0.0, 0.0, 1.0);
     return;
   }
 
-  vec2 texelSize = vec2(1.0 / scrWidth, 1.0 / scrHeight);
   vec4 tex = texture(screenTex, TexCoord);
   vec4 tileTex = texture(tileTex, TexCoord);
   float grey = (tex.r + tex.g + tex.b) * 0.33333;
@@ -53,7 +55,7 @@ void main() {
     light = texture(lightTex, lightUV - texelSize * 8.0).rgb;
   }
   if (!(tileTex.r + tileTex.b + tileTex.g > 0.01 ||
-        (levelMax.y - scrUV.y) / (levelMax.y - levelMin.y) < 0.3)) {
+        (levelMax.y - scrUV.y) / (levelMax.y - levelMin.y) < 0.1)) {
     light = vec3(1.0);
   }
 

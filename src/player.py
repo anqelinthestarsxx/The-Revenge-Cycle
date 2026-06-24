@@ -183,7 +183,7 @@ class Shotgun:
         pos = [self.target.get_rect().centerx + math.cos(angle) * self.img.get_height() / 2, self.target.get_rect().centery + 4 + math.sin(angle) * self.img.get_height() / 2]
         self.bullets.append([list(pos), angle, 0])
         self.rebound = -5
-        self.target.movement += pygame.Vector2(self.rebound * math.cos(angle), self.rebound * math.sin(angle)) * 0.2
+        self.target.movement += pygame.Vector2(self.rebound * math.cos(angle), self.rebound * math.sin(angle)) * 0.4
 
         for _ in range(random.randint(10, 15)):
             spread = 1
@@ -415,11 +415,13 @@ class Player:
 
         self.attacking = False
 
-        self.node_radius = self.dimensions.x * 0.35
+        self.node_radius = self.dimensions.x * 0.4
         self.p1 = {}
         self.p2 = {}
 
         self.img = self.idle.animation[0].copy()
+
+        self.current_node = self.app.tile_map.get_closest_node_id(self.pos)
     
     def die(self, impact: pygame.Vector2, impact_point: pygame.Vector2):
         if not self.dead:
@@ -487,6 +489,7 @@ class Player:
         return pygame.Rect(self.pos.x, self.pos.y, self.dimensions.x, self.dimensions.y)
     
     def update(self, dt):
+        self.current_node = self.app.tile_map.get_closest_node_id(self.pos)
         if self.mode == "sword":
             self.sword.update()
         elif self.mode == "shotgun":
@@ -708,7 +711,7 @@ class Player:
     def draw(self, surf, scroll):
         if not self.dead:
             self.sword.offset = (-4, -4)
-            offset = pygame.Vector2(0, 0)
+            offset = pygame.Vector2(-3, 0)
             anim = self.handle_animation(self.app.dt)
             anim.flip = self.flip
             # pygame.draw.rect(surf, (255, 0, 0), (self.pos.x - scroll[0], self.pos.y - scroll[1], self.dimensions.x, self.dimensions.y))
@@ -729,7 +732,7 @@ class Player:
                 self.pepper.draw(surf, scroll)
             else:
                 if self.attacking:
-                    offset = pygame.Vector2(-9, 0)
+                    offset = pygame.Vector2(-12, 0)
                 anim.draw(surf, scroll, self.pos + offset)
         else:
             deg = self.get_dead_angle()

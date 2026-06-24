@@ -18,6 +18,7 @@ class TileMap:
         self.anchors = []
         self.blasters = []
         self.start_pos = [10, 10]
+        self.path_nodes = []
     
     def load(self, path):
         data = read_json(path)
@@ -44,8 +45,30 @@ class TileMap:
         for tile in self.off_grid:
             tile["type"] = tile["type"]
         
+        self.path_nodes.extend(data["level"]["path_nodes"] if "path_nodes" in data["level"] else [])
+        for node in self.path_nodes:
+            node[0] *= TILE_SIZE
+            node[0] += TILE_SIZE * 0.5
+            node[1] *= TILE_SIZE
+            node[1] += TILE_SIZE * 0.5
+        
         # self.extract_grass()
         self.calculate_light_map()
+    
+    # avoid doing this too much (O(n) comparisons)
+    def get_closest_node_id(self, pos):
+        pos = list(pos)
+        min_dist = None
+        min_id = 0
+        for i, node in enumerate(self.path_nodes):
+            dist2 = (pos[0] - node[0]) ** 2 + (pos[1] - node[1]) ** 2
+            if min_dist == None:
+                min_dist = dist2
+                min_id = i
+            elif min_dist > dist2:
+                min_dist = dist2
+                min_id = i
+        return min_id
     
     def extract_blasters(self):
         self.blasters = []
