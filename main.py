@@ -45,13 +45,15 @@ class App:
                     "idle": load_animation("player/black/idle.png", 15, 31, 4),
                     "run": load_animation("player/black/walk.png", 15, 31, 4),
                     "jump": load_animation("player/black/jump.png", 15, 31, 2),
-                    "land": load_animation("player/black/land.png", 16, 31, 3)
+                    "land": load_animation("player/black/land.png", 16, 31, 3),
+                    "punch": load_animation("player/black/punch.png", 32, 32, 7)
                 },
                 "white": {
                     "idle": load_animation("player/white/idle.png", 15, 31, 4),
                     "run": load_animation("player/white/walk.png", 15, 31, 4),
                     "jump": load_animation("player/white/jump.png", 15, 31, 2),
-                    "land": load_animation("player/white/land.png", 16, 31, 3)
+                    "land": load_animation("player/white/land.png", 16, 31, 3),
+                    "punch": load_animation("player/white/attack.png", 32, 32, 7)
                 },
                 "knife": load_image("player/knife.png"),
                 "shotgun": load_image("player/shotgun.png"),
@@ -443,6 +445,9 @@ class App:
                                 self.player.pepper.shoot(mouse_pos)
                             else:
                                 self.player.pepper.shoot(pygame.Vector2(self.player.pepper.pos) + pygame.Vector2(300 * -(2 * int(self.player.flip) - 1), -5))
+                        elif self.player.mode == "fists" and not self.player.attacking:
+                            self.player.punch.reset()
+                            self.player.attacking = True
                 elif event.type == pygame.KEYUP:
                     if event.key in {pygame.K_UP, pygame.K_SPACE, pygame.K_w}:
                         self.player.release_jump()
@@ -465,6 +470,9 @@ class App:
                         mouse_pos -= self.level_surf_pos
                         mouse_pos /= self.ls_scale
                         self.player.pepper.shoot(mouse_pos)
+                    elif self.player.mode == "fists" and not self.player.attacking:
+                        self.player.punch.reset()
+                        self.player.attacking = True
             
             # delta time
             self.dt = (time.time() - self.last_time) * 60

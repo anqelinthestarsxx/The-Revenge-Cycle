@@ -118,9 +118,6 @@ class Pepper:
                 if circle.colliderect(enemy.get_rect()) and not enemy.dead:
                     kill = True
                     self.explode(p[0], p[1])
-                elif enemy.dead and enemy.particle_check(p[0])[0]:
-                    kill = True
-                    self.explode(p[0], p[1])
 
             if self.app.tile_map.solid_check(p[0]):
                 kill = True
@@ -388,7 +385,9 @@ class Player:
         self.sword = Sword(self.app.assets["player"]["knife"], app, self.pos, self, offset=(0, -5))
         self.shotgun = Shotgun(self.app.assets["player"]["shotgun"], app, self, (0, -10))
         self.pepper = Pepper(self.app.assets["player"]["pepper"], app, self, (0, 0))
-        self.mode = "shotgun"
+        self.mode = "fists"
+
+        self.attacking = False
 
     def get_attack_rect(self):
         return pygame.Rect(self.get_rect().centerx - 15 * int(self.flip), self.pos.y + 10, 15, self.dimensions.y - 10)
@@ -399,6 +398,7 @@ class Player:
         self.run = Anim(self.app.assets["player"][self.color]["run"], 0.2)
         self.jump = Anim(self.app.assets["player"][self.color]["jump"], 0.1, False)
         self.land = Anim(self.app.assets["player"][self.color]["land"], 0.2, False)
+        self.punch = Anim(self.app.assets["player"][self.color]["punch"], 0.3, False)
 
     def get_rect(self):
         return pygame.Rect(self.pos.x, self.pos.y, self.dimensions.x, self.dimensions.y)
@@ -495,6 +495,15 @@ class Player:
         self.jumping = self.jump_height + 1
     
     def handle_animation(self, dt):
+        if self.attacking:
+            self.punch.update(dt)
+            self.jump.reset()
+            self.idle.reset()
+            self.run.reset()
+            if self.punch.finished:
+                self.attacking = False
+            else:
+                return self.punch
         if self.falling > 3:
             self.jump.update(dt)
             self.idle.reset()
@@ -518,6 +527,7 @@ class Player:
 
     def draw(self, surf, scroll):
         self.sword.offset = (-4, -4)
+        offset = pygame.Vector2(0, 0)
         anim = self.handle_animation(self.app.dt)
         anim.flip = self.flip
         # pygame.draw.rect(surf, (255, 0, 0), (self.pos.x - scroll[0], self.pos.y - scroll[1], self.dimensions.x, self.dimensions.y))
@@ -526,14 +536,18 @@ class Player:
         if self.mode == "sword":
             if self.sword.angle > 0:
                 self.sword.draw(surf, scroll)
-                anim.draw(surf, scroll, (self.pos.x, self.pos.y))
+                anim.draw(surf, scroll, (self.pos.x + offset.x, self.pos.y + offset.y))
             else:
-                anim.draw(surf, scroll, self.pos)
+                anim.draw(surf, scroll, self.pos + offset)
                 self.sword.draw(surf, scroll)
         elif self.mode == "shotgun":
-            anim.draw(surf, scroll, self.pos)
+            anim.draw(surf, scroll, self.pos + offset)
             self.shotgun.draw(surf, scroll)
         elif self.mode == "pepper":
-            anim.draw(surf, scroll, self.pos)
+            anim.draw(surf, scroll, self.pos + offset)
             self.pepper.draw(surf, scroll)
+        else:
+            if self.attacking:
+                offset = pygame.Vector2(-9, 0)
+            anim.draw(surf, scroll, self.pos + offset)
         # self.sword.draw_slash(surf, scroll)
