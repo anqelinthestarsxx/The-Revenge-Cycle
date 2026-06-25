@@ -6,8 +6,8 @@ from .particles import *
 
 from .player import Sword, Pepper, Shotgun
 
-BOUNCE = 0.8
-FRICTION = 0.9
+BOUNCE = 0.5
+FRICTION = 0.8
 
 class Enemy:
     def __init__(self, app, dimensions, start_pos, num=0):
@@ -56,6 +56,7 @@ class Enemy:
         self.scribble_surf.set_colorkey((0, 255, 0))
 
         self.pause_time = 0
+        self.verlet_timer = 0
 
     def get_rect(self):
         return pygame.Rect(self.pos.x, self.pos.y, self.dimensions.x, self.dimensions.y)
@@ -122,6 +123,7 @@ class Enemy:
                             enemy.mood = random.choice(["panic", "angry"])
 
     def update(self, dt):
+        self.verlet_timer += dt
         if self.mode == "sword":
             self.sword.update()
         elif self.mode == "shotgun":
@@ -131,6 +133,9 @@ class Enemy:
         elif self.mode == "pepper":
             self.pepper.update()
         if self.dead:
+            if self.verlet_timer < 1:
+                return
+            self.verlet_timer = 0
             # print(self.get_dead_midpoint())
             # print(self.p1, self.p2)
             vels = []

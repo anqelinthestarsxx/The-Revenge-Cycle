@@ -8,8 +8,8 @@ from .sparks import *
 
 import pygame.geometry
 
-BOUNCE = 0.8
-FRICTION = 0.9
+BOUNCE = 0.5
+FRICTION = 0.8
 
 class Pepper:
     def __init__(self, img, app, target, offset, player=False):
@@ -411,7 +411,7 @@ class Player:
         self.sword = Sword(self.app.assets["player"]["knife"], app, self.pos, self, offset=(0, -5))
         self.shotgun = Shotgun(self.app.assets["player"]["shotgun"], app, self, (0, -10), player=True)
         self.pepper = Pepper(self.app.assets["player"]["pepper"], app, self, (0, 0), player=True)
-        self.mode = "sword"
+        self.mode = "shotgun"
 
         self.attacking = False
 
@@ -429,6 +429,8 @@ class Player:
         self.scribble_surf.set_colorkey((0, 255, 0))
 
         self.current_node = self.app.tile_map.get_closest_node_id(self.pos)
+
+        self.verlet_timer = 0
     
     def die(self, impact: pygame.Vector2, impact_point: pygame.Vector2):
         if not self.dead:
@@ -498,6 +500,7 @@ class Player:
         return pygame.Rect(self.pos.x, self.pos.y, self.dimensions.x, self.dimensions.y)
     
     def update(self, dt):
+        self.verlet_timer += dt
         self.current_node = self.app.tile_map.get_closest_node_id(self.pos)
         if self.mode == "sword":
             self.sword.update()
@@ -506,6 +509,9 @@ class Player:
         elif self.mode == "pepper":
             self.pepper.update()
         if self.dead:
+            if self.verlet_timer < 1:
+                return
+            self.verlet_timer = 0
             vels = []
             for p in [self.p1, self.p2]:
                 vx = (p['x'] - p['oldx'])
