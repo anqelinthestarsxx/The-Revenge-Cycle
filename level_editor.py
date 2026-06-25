@@ -8,7 +8,7 @@ SCR_HEIGHT = 1200
 SCALE = 2 # screen scaling
 
 # json map path
-MAP = "data/maps/0.json"
+MAP = "data/maps/5.json"
 
 # tile sets that can be autotiled
 AUTO_TILE_TYPES = {"grass", "kitchen", "wood"}
@@ -84,7 +84,7 @@ class Editor:
     def create_new(self, path):
         f = open(path, "w")
         # write basic json level data
-        json.dump({"level": {"tiles": [], "off_grid": [], "water": [], "anchors": []}}, f, separators=(",", ":"))
+        json.dump({"level": {"tiles": [], "off_grid": [], "water": [], "anchors": [], "path_nodes": [], "player_pos": [0, 0]}}, f, separators=(",", ":"))
         f.close()
 
     # load json level data from path

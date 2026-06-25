@@ -431,12 +431,14 @@ class Player:
         self.current_node = self.app.tile_map.get_closest_node_id(self.pos)
 
         self.verlet_timer = 0
+
+        self.finished = False
     
     def die(self, impact: pygame.Vector2, impact_point: pygame.Vector2):
         if not self.dead:
             impact = pygame.Vector2(impact)
             impact_point = pygame.Vector2(impact_point)
-            self.dead = True
+            # self.dead = True
 
             self.app.slomo = 0.1
 
@@ -585,7 +587,18 @@ class Player:
 
         # first do x-axis movement
         self.pos.x += fm.x
-        self.pos.x = max(0, min(TILE_SIZE * CHUNK_SIZE * LEVEL_WIDTH - self.dimensions.x, self.pos.x))
+
+        if not self.app.level_complete:
+            self.pos.x = max(0, min(TILE_SIZE * CHUNK_SIZE * LEVEL_WIDTH - self.dimensions.x, self.pos.x))
+        else:
+            if self.color == "black":
+                self.pos.x = max(0, self.pos.x)
+                if self.pos.x > TILE_SIZE * CHUNK_SIZE * LEVEL_WIDTH:
+                    self.finished = True
+            elif self.color == "white":
+                self.pos.x = min(TILE_SIZE * CHUNK_SIZE * LEVEL_WIDTH - self.dimensions.x, self.pos.x)
+                if self.pos.x < -self.dimensions.x:
+                    self.finished = True
         r = self.get_rect()
         for rect in self.app.tile_map.physics_rects_around(r.center):
             if r.colliderect(rect):

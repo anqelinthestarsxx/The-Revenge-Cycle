@@ -6,6 +6,7 @@ out vec4 FragColor;
 uniform sampler2D screenTex;
 uniform sampler2D lightTex;
 uniform sampler2D tileTex;
+uniform sampler2D uiTex;
 
 uniform float scrollX;
 uniform float scrollY;
@@ -30,6 +31,12 @@ void main() {
       scrUV.x >= levelMax.x - texelSize.x ||
       scrUV.y >= levelMax.y - texelSize.y) {
     FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    return;
+  }
+
+  vec4 uiSample = texture(uiTex, TexCoord);
+  if (uiSample.r + uiSample.b + uiSample.g > 0.01) {
+    FragColor = vec4(uiSample.rgb, 1.0);
     return;
   }
 

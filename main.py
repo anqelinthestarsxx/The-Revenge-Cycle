@@ -12,6 +12,9 @@ pygame.init()
 pygame.mixer.init()
 pygame.font.init()
 
+SERIES_1 = ["data/maps/0.json", "data/maps/1.json", "data/maps/2.json"]
+SERIES_2 = ["data/maps/3.json", "data/maps/4.json", "data/maps/5.json"]
+
 class App:
     def __init__(self):
         print(f"Running from {get_script_path()}")
@@ -25,6 +28,11 @@ class App:
         self.ls_scale = 1
         self.level_surf_pos = pygame.Vector2(0, 0)
         self.level_surf = pygame.Surface((TILE_SIZE * CHUNK_SIZE * LEVEL_WIDTH, TILE_SIZE * CHUNK_SIZE * LEVEL_HEIGHT))
+        self.ui_surf = self.level_surf.copy()
+        self.ui_render_surf = self.screen.copy()
+
+        self.fade = 0
+        self.fade_dir = 0
 
         self.ctx: moderngl.Context = None
         self.prog: moderngl.Program = None
@@ -131,7 +139,55 @@ class App:
         self.clouds.sort(key=lambda x: -x[3])
 
         self.slomo = 1.0
+
+        self.level_complete = False
+        self.series = 0
+        self.level = 0
     
+    def next_level(self):
+        self.level += 1
+        if self.level > 2:
+            self.series = (self.series + 1) % 2
+            self.level = 0
+        series = SERIES_1 if self.series == 0 else SERIES_2
+        self.tile_map.load(series[self.level])
+
+        # extract enemies
+        self.enemies = []
+        for loc in self.tile_map.tile_map.copy():
+            if self.tile_map.tile_map[loc]["type"] == "enemy":
+                tile = self.tile_map.tile_map[loc]
+                self.enemies.append(Enemy(self, [15, 31], [self.tile_map.tile_map[loc]["pos"][0] * TILE_SIZE, self.tile_map.tile_map[loc]["pos"][1] * TILE_SIZE], num=len(self.enemies)))
+                del self.tile_map.tile_map[loc]
+
+        self.scroll = pygame.Vector2(0, 0)
+        self.screen_shake = 0
+
+        self.player = Player(self, [9, 31], self.tile_map.player_pos, "black" if self.series < 1 else "white")
+
+        self.particles = []
+        self.wind = ([0, 10], [0, 15], [0, 5])
+        self.kickup = []
+        self.kickup_surf = pygame.Surface((1, 1))
+        self.sparks = []
+        self.smoke = []
+        self.fireflies = []
+        self.slime = []
+        self.splat = []
+        for _ in range(10):
+            # [pos, dir, angle]
+            self.fireflies.append([[random.random() * 10000, random.random() * 10000], random.random() * math.pi * 2, random.random() * 10 + 10, random.random() * 4 * random.choice([-1, 1]), random.random() * 50])
+        self.cinders = PhysicsParticles(self, trail=True, bounce=0.3, explode=True, friction=0.7)
+
+        self.clouds = []
+        for _ in range(6):
+            self.clouds.append([random.random() * 10000, random.random() * 10000, random.choice([0, 1]), random.random() * 0.5 + 0.25])
+        self.clouds.sort(key=lambda x: -x[3])
+
+        self.slomo = 1.0
+
+        self.level_complete = False
+   
     def update_fireflies(self, scroll):
         for fly in self.fireflies:
             fly[0][0] += math.cos(fly[1]) * fly[2] * self.dt * 0.05
@@ -340,6 +396,7 @@ class App:
         self.prog["screenTex"].value = 0
         self.prog["lightTex"].value = 1
         self.prog["tileTex"].value = 2
+        self.prog["uiTex"].value = 3
 
         vertices = array.array("f", [-1.0, 1.0, 0.0, 0.0, -1.0, -1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, -1.0, 1.0, 1.0])
         self.vbo = self.ctx.buffer(vertices)
@@ -351,6 +408,12 @@ class App:
         self.screenTex.swizzle = "BGRA"
         self.screenTex.repeat_x = False
         self.screenTex.repeat_y = False
+
+        self.uiTex = self.ctx.texture(self.ui_render_surf.get_size(), 4)
+        self.uiTex.filter = (moderngl.NEAREST, moderngl.NEAREST)
+        self.uiTex.swizzle = "BGRA"
+        self.uiTex.repeat_x = False
+        self.uiTex.repeat_y = False
 
         self.tileTex = self.ctx.texture(self.screen.get_size(), 4)
         self.tileTex.filter = (moderngl.NEAREST, moderngl.NEAREST)
@@ -380,8 +443,16 @@ class App:
     def update(self):
         # update entities
         self.player.update(self.dt)
+
+        complete = True
         for enemy in self.enemies:
             enemy.update(self.dt)
+            if not enemy.dead:
+                complete = False
+            if self.player.dead:
+                enemy.mood = "passive"
+        if complete:
+            self.level_complete = True
             # if not self.player.dead and random.random() < 0.005:
                 # enemy.pepper.shoot(pygame.Vector2(self.player.get_rect().center) + pygame.Vector2(random.random() * 50 - 25, random.random() * 50 - 25))
 
@@ -468,6 +539,26 @@ class App:
         light_surf = self.tile_map.get_light_data(self.screen, render_scroll)
         self.lightTex.write(light_surf.get_view('1'))
 
+        self.ui_render_surf.fill((0, 0, 0))
+        self.ui_surf.fill((0, 0, 0))
+
+        if self.player.finished and not (self.fade_dir == 1):
+            self.fade_dir = 1
+    
+        self.fade = pygame.math.clamp(self.fade + self.fade_dir * self.dt * 0.03, 0, 1)
+        if self.fade_dir == 1 and self.fade == 1:
+            self.next_level()
+            self.fade_dir = -1
+        
+        if self.fade == 0 and self.fade_dir == -1:
+            self.fade_dir = 0
+
+        pygame.draw.rect(self.ui_surf, (20, 16, 32), (0, 0, self.ui_surf.get_width(), self.ui_surf.get_height() * 0.5 * self.fade))
+        pygame.draw.rect(self.ui_surf, (20, 16, 32), (0, self.ui_surf.get_height() * 0.5 + (1 - self.fade) * self.ui_surf.get_height() * 0.5, self.ui_surf.get_width(), self.ui_surf.get_height() * 0.5 * self.fade))
+
+        self.ui_render_surf.blit(pygame.transform.scale(self.ui_surf, level_size), self.level_surf_pos)
+        self.uiTex.write(self.ui_render_surf.get_view('1'))
+
     def run(self):
         while True:
             for event in pygame.event.get():
@@ -482,9 +573,11 @@ class App:
                     self.display = pygame.display.set_mode((width, height), flags=pygame.RESIZABLE | pygame.OPENGL | pygame.DOUBLEBUF)
                     self.screen = pygame.Surface((width // SCALE, height // SCALE))
                     self.tileSurf = pygame.Surface(self.screen.get_size())
+                    self.ui_render_surf = pygame.Surface(self.screen.get_size())
                     self.screenTex.release()
                     self.lightTex.release()
                     self.tileTex.release()
+                    self.uiTex.release()
 
                     resolution = 1
                     xscale = self.screen.get_width() / self.level_surf.get_width() * resolution
@@ -570,6 +663,7 @@ class App:
             self.lightTex.use(1)
             self.prog["tintFactor"] = self.slomo * 0.25 + 0.75
             self.tileTex.use(2)
+            self.uiTex.use(3)
             self.vao.render(moderngl.TRIANGLE_STRIP) # render screen quad
 
             pygame.display.flip()

@@ -52,3 +52,5 @@
 # Friday
  - Finishing touches
  - Build for Windows and playtest
+
+# difficulty: pause time + chance of getting angry

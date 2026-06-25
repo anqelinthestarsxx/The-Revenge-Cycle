@@ -59,7 +59,7 @@ class Enemy:
         self.scribble_surf.blit(self.mask_surf, (0, 0))
         self.scribble_surf.set_colorkey((0, 255, 0))
 
-        self.pause_time = 0
+        self.pause_time = random.random() * 10
         self.verlet_timer = 0
 
     
@@ -164,7 +164,10 @@ class Enemy:
                         if enemy.mood == "panic":
                             enemy.mood = "angry"
                         else:
-                            enemy.mood = random.choice(["panic", "angry"])
+                            if random.random() < 0.6:
+                                enemy.mood = "panic"
+                            else:
+                                enemy.mood = "angry"
 
     def update(self, dt):
         self.verlet_timer += dt
