@@ -19,6 +19,7 @@ class TileMap:
         self.blasters = []
         self.start_pos = [10, 10]
         self.path_nodes = []
+        self.player_pos = [0, 0]
     
     def load(self, path):
         data = read_json(path)
@@ -43,6 +44,7 @@ class TileMap:
             }
             if img != None:
                 self.tile_map[tile_loc]["mask_surf"] = self.tile_map[tile_loc]["mask"].to_surface(setcolor=(0, 0, 0, 0), unsetcolor=(255, 0, 0))
+        self.player_pos = data["level"]["player_pos"]
 
         # load off grid tiles
         self.off_grid.extend(data["level"]["off_grid"])

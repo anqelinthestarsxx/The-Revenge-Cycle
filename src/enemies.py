@@ -335,10 +335,12 @@ class Enemy:
                 self.movement.x += self.wander_dir * 0.1 * self.app.dt
                 if self.movement.x < 0:
                     self.flip = True
-                if self.app.tile_map.solid_check((self.get_rect().centerx + TILE_SIZE, self.get_rect().bottom - 1)) or self.app.tile_map.solid_check((self.get_rect().centerx - TILE_SIZE, self.get_rect().bottom - 1)):
-                    if self.wander > 40:
-                        self.wander = 0
-                        self.wander_dir *= -1
+                
+                if not self.app.tile_map.solid_check((self.get_rect().centerx + (-TILE_SIZE if self.flip else TILE_SIZE), self.get_rect().bottom + 8)) or self.app.tile_map.solid_check((self.get_rect().centerx + (-TILE_SIZE if self.flip else TILE_SIZE), self.get_rect().centerx)):
+                    if self.wander > 100:
+                        self.wander = random.random() * 50
+                        self.wander_dir = 0
+
             elif self.mood == "panic":
                 self.wander += self.app.dt
                 if self.wander_dir == 0:
@@ -348,8 +350,9 @@ class Enemy:
                     self.flip = True
                 else:
                     self.flip = False
-                if self.app.tile_map.solid_check((self.get_rect().centerx + TILE_SIZE, self.get_rect().bottom - 1)) or self.app.tile_map.solid_check((self.get_rect().centerx - TILE_SIZE, self.get_rect().bottom - 1)) or (abs(self.app.player.get_rect().centerx - self.get_rect().centerx) < 50 and abs(self.app.player.get_rect().centery - self.get_rect().centery) < 64):
-                    if self.wander > 40:
+
+                if not self.app.tile_map.solid_check((self.get_rect().centerx + (-TILE_SIZE if self.flip else TILE_SIZE), self.get_rect().bottom + 8)) or self.app.tile_map.solid_check((self.get_rect().centerx + (-TILE_SIZE if self.flip else TILE_SIZE), self.get_rect().centerx)) or (abs(self.app.player.get_rect().centerx - self.get_rect().centerx) < 50 and abs(self.app.player.get_rect().centery - self.get_rect().centery) < 64):
+                    if self.wander > 100:
                         self.wander = 0
                         self.wander_dir *= -1
             elif self.mood == "angry":

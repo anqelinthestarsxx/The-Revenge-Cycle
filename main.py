@@ -96,7 +96,7 @@ class App:
         }
 
         self.tile_map = TileMap(self)
-        self.tile_map.load("data/maps/1.json")
+        self.tile_map.load("data/maps/0.json")
 
         # extract enemies
         self.enemies = []
@@ -109,7 +109,7 @@ class App:
         self.scroll = pygame.Vector2(0, 0)
         self.screen_shake = 0
 
-        self.player = Player(self, [9, 31], [20, 50], "black")
+        self.player = Player(self, [9, 31], self.tile_map.player_pos, "black")
 
         self.particles = []
         self.wind = ([0, 10], [0, 15], [0, 5])
@@ -239,6 +239,7 @@ class App:
             splat[3] -= 0.001 * self.dt
             if splat[3] <= 0:
                 self.splat.remove(splat)
+        locs = []
         for i, slime in sorted(enumerate(self.slime), reverse=True):
             prev_pos = slime[0].copy()
             slime[0][0] += slime[1][0] * self.dt
@@ -261,8 +262,8 @@ class App:
                                 target_tile["img"].set_at((img_pos[0], img_pos[1] + slime_width), (20, 16, 32))
                     except IndexError:
                         pass
-                        
-                    target_tile["img"].blit(target_tile["mask_surf"])
+                    
+                    locs.append(tile_loc)
                     target_tile["img"].set_colorkey((0, 255, 0))
                     drawn = 1
             for enemy in self.enemies:
@@ -310,6 +311,10 @@ class App:
             if abs(slime[1][0]) < 0.01:
                 if abs(slime[1][1]) < 0.01: # (22, 19, 35)
                     self.slime.pop(i)
+        for loc in locs:
+            tt = self.tile_map.tile_map[loc]
+            tt["img"].blit(tt["mask_surf"])
+            tt["img"].set_colorkey((0, 255, 0))
 
     
     def reset(self):

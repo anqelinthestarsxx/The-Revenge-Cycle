@@ -8,7 +8,7 @@ SCR_HEIGHT = 1200
 SCALE = 2 # screen scaling
 
 # json map path
-MAP = "data/maps/1.json"
+MAP = "data/maps/0.json"
 
 # tile sets that can be autotiled
 AUTO_TILE_TYPES = {"grass", "kitchen", "wood"}
@@ -43,6 +43,7 @@ class Editor:
         self.off_grid = []
         self.anchors = []
         self.path_nodes = []
+        self.player_pos = [0, 0]
         self.load(MAP)
 
         # assets
@@ -112,6 +113,7 @@ class Editor:
                 tile["type"] = tile["type"]
             
             self.path_nodes.extend(data["level"]["path_nodes"] if "path_nodes" in data["level"] else [])
+            self.player_pos = data["level"]["player_pos"]
             
 
         # if map doesn't exist, create new one
@@ -139,7 +141,8 @@ class Editor:
                     "level": {
                         "tiles": tiles,
                         "off_grid": off_grid,
-                        "path_nodes": self.path_nodes
+                        "path_nodes": self.path_nodes,
+                        "player_pos": self.player_pos
                     }
                 },
                 f,
@@ -324,6 +327,7 @@ class Editor:
         self.draw_tiles()
         for node in self.path_nodes:
             pygame.draw.circle(self.screen, (255, 255, 255), (node[0] * TILE_SIZE - self.scroll[0] + TILE_SIZE * 0.5, node[1] * TILE_SIZE - self.scroll[1] + TILE_SIZE * 0.5), TILE_SIZE * 0.5)
+        pygame.draw.rect(self.screen, (0, 255, 0), (self.player_pos[0] - self.scroll[0], self.player_pos[1] - self.scroll[1], TILE_SIZE, TILE_SIZE))
         mouse_pos = pygame.mouse.get_pos()
         if self.grid:
             mouse_pos = [
@@ -387,6 +391,12 @@ class Editor:
                         self.mode = "node"
                     elif event.key == pygame.K_n:
                         self.mode = "normal"
+                    elif event.key == pygame.K_p:
+                        mouse_pos = pygame.mouse.get_pos()
+                        self.player_pos = [
+                            math.floor((mouse_pos[0] / SCALE + self.scroll.x) / TILE_SIZE) * TILE_SIZE,
+                            math.floor((mouse_pos[1] / SCALE + self.scroll.y) / TILE_SIZE) * TILE_SIZE
+                        ]
                 elif event.type == pygame.KEYUP:
                     if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                         self.controls["right"] = False
