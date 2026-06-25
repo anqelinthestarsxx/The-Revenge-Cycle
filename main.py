@@ -8,6 +8,8 @@ from src.player import Player
 from src.enemies import Enemy
 from src.particles import *
 
+import pygame.gfxdraw
+
 pygame.init()
 pygame.mixer.init()
 pygame.font.init()
@@ -113,7 +115,8 @@ class App:
         self.noiseTex.repeat_y = True
         self.noiseTex.write(self.assets["noise"].get_view('1'))
 
-        self.font = load_font("dogicapixelbold.ttf", size=8)
+        self.bold_font = load_font("dogicapixelbold.ttf", size=8)
+        self.font = load_font("dogicapixel.ttf", size=8)
 
         self.tile_map = TileMap(self)
         self.tile_map.load("data/maps/0.json")
@@ -156,8 +159,22 @@ class App:
         self.series = 0
         self.level = 0
 
-        self.state = "menu"
-    
+        self.state = "spin"
+
+        self.text = [
+            "Food is a very serious business...", 
+            "The young chef Elsa Turner has a promising career ahead of her, were it not for the raucious visitors attending the grimy tavern - 'The Vista' near her restaurant, the Sérénité.",
+            "Elsa has politely requested the owner, Bart Freeman, many times to cut down the noise around his tavern, as the ordinary folk repulse the wealthy patrons of her fine dining establishment.",
+            "However, that cantankerous old fool has stubbornly refused to hear Elsa's pleas, laughing in her face! The impertinence! Drastic times call for drastic measures, so Elsa has taken matters into her own hands..."
+        ]
+        self.text_idx = 0
+        self.text_timer = 0
+
+        self.wheel_angle = math.radians(math.floor(random.random() * 1000 / 45) * 45)
+        self.wheel_vel = 0
+        self.wheel_scale = 1
+        self.wheel_scale_vel = 0
+        self.spin_alpha = 1
     
     def menu(self):
         level_size = (self.level_surf.get_width() * self.ls_scale, self.level_surf.get_height() * self.ls_scale)
@@ -171,9 +188,8 @@ class App:
         self.ui_surf.blit(self.assets["logo"], (self.ui_surf.get_width() * 0.5 - self.assets["logo"].get_width() * 0.5, self.ui_surf.get_height() * 0.5 - self.assets["logo"].get_height() * 0.5 + math.sin(time.time() * 1) * 5 - TILE_SIZE + max(0, 30 - self.time) * 50))
 
         if self.time * 0.02 % 2 < 1.54:
-            font_surf = self.font.render("Press [ENTER] to begin!", False, (219, 224, 231))
+            font_surf = self.bold_font.render("Press [ENTER] to begin!", False, (219, 224, 231))
             self.ui_surf.blit(font_surf, (self.ui_surf.get_width() * 0.5 - font_surf.get_width() * 0.5, self.ui_surf.get_height() * 0.6+ max(0,  30 - self.time) * 50))
-
     
         self.fade = pygame.math.clamp(self.fade + self.fade_dir * self.dt * 0.014, 0, 1)
         if self.fade_dir == 1 and self.fade == 1:
@@ -208,19 +224,115 @@ class App:
 
         self.fade = pygame.math.clamp(self.fade + self.fade_dir * self.dt * 0.014, 0, 1)
         if self.fade_dir == 1 and self.fade == 1:
+            self.state = "spin"
+            self.fade_dir = -1
+        
+        if self.fade == 0 and self.fade_dir == -1:
+            self.fade_dir = 0
+        
+        
+
+        padding = 4
+
+        if self.time * 0.02 % 2 < 1.54:
+            font_surf = self.bold_font.render("Press [ENTER] to continue", False, (219, 224, 231))
+            self.ui_surf.blit(font_surf, (TILE_SIZE + padding + 1, self.ui_surf.get_height() - font_surf.get_height() - padding - 1 - TILE_SIZE))
+        
+        self.text_timer += self.dt
+
+        full_text = self.text[self.text_idx]
+        render_text = [""]
+        idx = 0
+        type_speed = 0.8
+        for i in range(min(int(max(0, self.text_timer - 100) * type_speed), len(full_text))):
+            if full_text[i] == " ":
+                temp = render_text[idx]
+                break_text = False
+                for j in range(len(full_text) - i - 1):
+                    if full_text[i + j + 1] == " ":
+                        break_text = False
+                        break
+                    else:
+                        temp += full_text[i + j]
+                    if self.font.size(temp)[0] >= self.ui_surf.get_width() - 2 * TILE_SIZE - 2 - padding * 3:
+                        break_text = True
+                        break
+                if break_text:
+                    render_text.append("")
+                    idx += 1
+            render_text[idx] += full_text[i]
+        
+        for i, line in enumerate(render_text):
+            text_surf = self.font.render(line, False, (219, 224, 231))
+            self.ui_surf.blit(text_surf, (TILE_SIZE + padding + 1, TILE_SIZE + padding + 1 + 12 * i))
+        
+        pygame.draw.rect(self.ui_surf, (20, 16, 32), (0, 0, self.ui_surf.get_width(), self.ui_surf.get_height() * 1.6 * self.fade))
+
+        self.ui_render_surf.blit(pygame.transform.scale(self.ui_surf, level_size), self.level_surf_pos)
+        self.uiTex.write(self.ui_render_surf.get_view('1'))
+
+        self.prog["scrollX"].value = 0
+        self.prog["scrollY"].value = 0
+        self.prog["scrWidth"].value = self.screen.get_width()
+        self.prog["scrHeight"].value = self.screen.get_height()
+        self.prog["levelX"].value = self.level_surf_pos.x
+        self.prog["levelY"].value = self.level_surf_pos.y
+        self.prog["levelW"].value = level_size[0]
+        self.prog["levelH"].value = level_size[1]
+        self.prog["levelScale"].value = self.ls_scale
+    
+    def wheel_spin(self):
+        level_size = (self.level_surf.get_width() * self.ls_scale, self.level_surf.get_height() * self.ls_scale)
+        self.level_surf_pos = pygame.Vector2(
+            self.screen.get_width() * 0.5 - level_size[0] * 0.5,
+            self.screen.get_height() * 0.5 - level_size[1] * 0.5,
+        )
+        self.ui_render_surf.fill((0, 0, 0))
+        self.ui_surf.fill((0, 0, 0))
+
+        font_surf = self.bold_font.render("Choose your weapon!".upper(), False, (219, 224, 231))
+        self.ui_surf.blit(font_surf, (self.ui_surf.get_width() * 0.5 - font_surf.get_width() * 0.5, 8))
+        font_surf = self.bold_font.render("Press [ENTER] to spin!", False, (219, 224, 231))
+        if self.spin_alpha < 1:
+            self.spin_alpha = max(0, self.spin_alpha - 0.0167 * self.dt)
+        font_surf.set_alpha(255 * self.spin_alpha)
+        self.ui_surf.blit(font_surf, (self.ui_surf.get_width() * 0.5 - font_surf.get_width() * 0.5, self.ui_surf.get_height() - 16))
+
+        self.fade = pygame.math.clamp(self.fade + self.fade_dir * self.dt * 0.014, 0, 1)
+        if self.fade_dir == 1 and self.fade == 1:
             self.state = "game"
             self.fade_dir = -1
         
         if self.fade == 0 and self.fade_dir == -1:
             self.fade_dir = 0
 
+        self.wheel_angle += self.wheel_vel * self.dt
+        self.wheel_vel *= 0.98 ** self.dt
+        segments = 10
+        self.wheel_scale_vel += (1.0 - self.wheel_scale) * 0.5 * self.dt
+        self.wheel_scale += self.wheel_scale_vel * self.dt
+        self.wheel_scale_vel *= 0.7 ** self.dt
+        radius = min(self.ui_surf.get_height(), self.ui_surf.get_width()) * 0.4 * self.wheel_scale / (self.wheel_vel * 0.1 + 1)
+        colors =  [(120, 31, 44), (237, 82, 89), (247, 172, 55), (180, 94, 179)]
+        center = [self.ui_surf.get_width() * 0.5, self.ui_surf.get_height() * 0.5]
+        for i in range(4):
+            points = []
+
+            points.append(center)
+            start_angle = self.wheel_angle + math.pi * 0.5 * i
+            for j in range(segments + 1):
+                angle = start_angle + j/segments * math.pi * 0.5
+                points.append([center[0] + math.cos(angle) * radius, center[1] + math.sin(angle) * radius])
+            pygame.draw.polygon(self.ui_surf, colors[i], points)
+        pygame.draw.circle(self.ui_surf, (20, 16, 32), center, 10 * self.wheel_scale / (self.wheel_vel + 1) + math.sin(time.time() * 5))
+
         pygame.draw.rect(self.ui_surf, (20, 16, 32), (0, 0, self.ui_surf.get_width(), self.ui_surf.get_height() * 1.6 * self.fade))
 
         self.ui_render_surf.blit(pygame.transform.scale(self.ui_surf, level_size), self.level_surf_pos)
         self.uiTex.write(self.ui_render_surf.get_view('1'))
 
-        self.prog["scrollX"].value = render_scroll[0]
-        self.prog["scrollY"].value = render_scroll[1]
+        self.prog["scrollX"].value = 0
+        self.prog["scrollY"].value = 0
         self.prog["scrWidth"].value = self.screen.get_width()
         self.prog["scrHeight"].value = self.screen.get_height()
         self.prog["levelX"].value = self.level_surf_pos.x
@@ -633,7 +745,7 @@ class App:
 
         pygame.draw.rect(self.ui_surf, (20, 16, 32), (0, 0, self.ui_surf.get_width(), TILE_SIZE - 1))
         series = SERIES_1 if self.series == 0 else SERIES_2
-        font_surf = self.font.render(series[self.level][1], False, (219, 224, 231))
+        font_surf = self.bold_font.render(series[self.level][1], False, (219, 224, 231))
         self.ui_surf.blit(font_surf, (self.ui_surf.get_width() * 0.5 - font_surf.get_width() * 0.5, 4))
 
         if self.player.finished and not (self.fade_dir == 1):
@@ -714,8 +826,28 @@ class App:
                         elif event.key == pygame.K_z:
                             self.player.die(pygame.Vector2(0, 5), self.player.pos - pygame.Vector2(5, 5))
                     elif self.state == "menu":
-                        if event.key == pygame.K_RETURN:
+                        if event.key == pygame.K_RETURN and self.time > 30:
                             self.fade_dir = 1
+                    elif self.state == "talk":
+                        if event.key == pygame.K_RETURN:
+                            full_text = self.text[self.text_idx]
+                            if self.text_timer > 10:
+                                if (self.text_timer - 100) * 0.8 < len(full_text):
+                                    self.text_timer = len(full_text) / 0.8 + 100
+                                else:
+                                    self.text_idx += 1
+                                    if self.text_idx == len(self.text):
+                                        self.text_idx -= 1
+                                        self.fade_dir = 1
+                                    self.text_timer = 0
+                    elif self.state == "spin":
+                        if event.key == pygame.K_RETURN:
+                            if not self.spin_alpha < 1:
+                                self.wheel_vel = math.pi * 0.3 + random.random() * math.pi
+                                self.spin_alpha = 0.99
+                                self.wheel_scale = 0.8
+                            elif self.wheel_vel < 0.001:
+                                self.fade_dir = 1
                 elif event.type == pygame.KEYUP:
                     if self.state == "game":
                         if event.key in {pygame.K_UP, pygame.K_SPACE, pygame.K_w}:
@@ -759,6 +891,8 @@ class App:
                 self.menu()
             elif self.state == "talk":
                 self.talk()
+            elif self.state == "spin":
+                self.wheel_spin()
             
             self.prog["menu"] = int(self.state != "game")
             self.screenTex.write(self.screen.get_view('1')) # update opengl texture using pygame surface data
