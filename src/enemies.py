@@ -29,7 +29,7 @@ class Enemy:
         # for the animations
         self.flip = False
 
-        self.build_animation(self.app.assets["npc"]["kitchen"]["1"])
+        self.build_animation(self.app.assets["npc"]["kitchen"][random.choice(["1", "2", "3"])])
         self.img = self.idle.animation[0].copy()
 
         self.node_radius = self.dimensions.x * 0.35
@@ -322,6 +322,7 @@ class Enemy:
                 if self.wander > 240:
                     self.wander = random.random() * 200
                     if abs(self.wander_dir) > 0:
+                        self.wander = 0
                         self.wander_dir = 0
                     else:
                         self.wander_dir = random.choice([-1, 1])

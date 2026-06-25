@@ -70,6 +70,20 @@ class App:
                         "jump": load_animation("npcs/kitchen/1/jump.png", 16, 31, 2),
                         "land": load_animation("npcs/kitchen/1/land.png", 16, 31, 3),
                         "punch": load_animation("npcs/kitchen/1/attack.png", 32, 32, 7)
+                    },
+                    "2": {
+                        "idle": load_animation("npcs/kitchen/2/idle.png", 16, 31, 4),
+                        "run": load_animation("npcs/kitchen/2/walk.png", 16, 31, 4),
+                        "jump": load_animation("npcs/kitchen/2/jump.png", 16, 31, 2),
+                        "land": load_animation("npcs/kitchen/2/land.png", 16, 31, 3),
+                        "punch": load_animation("npcs/kitchen/2/attack.png", 32, 32, 7)
+                    },
+                    "3": {
+                        "idle": load_animation("npcs/kitchen/3/idle.png", 15, 31, 4),
+                        "run": load_animation("npcs/kitchen/3/walk.png", 15, 31, 4),
+                        "jump": load_animation("npcs/kitchen/3/jump.png", 16, 31, 2),
+                        "land": load_animation("npcs/kitchen/3/land.png", 16, 31, 3),
+                        "punch": load_animation("npcs/kitchen/3/attack.png", 32, 32, 7)
                     }
                 }
             },
