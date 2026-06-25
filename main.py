@@ -62,6 +62,17 @@ class App:
                 "bullet": load_image("player/bullet.png"),
                 "pepper": load_image("player/pepper.png")
             },
+            "npc": {
+                "kitchen": {
+                    "1": {
+                        "idle": load_animation("npcs/kitchen/1/idle.png", 16, 31, 4),
+                        "run": load_animation("npcs/kitchen/1/walk.png", 16, 31, 4),
+                        "jump": load_animation("npcs/kitchen/1/jump.png", 16, 31, 2),
+                        "land": load_animation("npcs/kitchen/1/land.png", 16, 31, 3),
+                        "punch": load_animation("npcs/kitchen/1/attack.png", 32, 32, 7)
+                    }
+                }
+            },
             "placeholder": load_image("placeholder.png"),
             "firefly": load_animation("firefly.png", 5, 5, 20),
             "particle/explosion": load_animation("particles/explosion.png", 5, 5, 15),
@@ -241,6 +252,8 @@ class App:
                     target_tile["img"].set_colorkey((0, 255, 0))
                     drawn = 1
             for enemy in self.enemies:
+                if not enemy.dead:
+                    continue
                 big_rect = pygame.Rect(enemy.pos.x - TILE_SIZE, enemy.pos.y - TILE_SIZE, TILE_SIZE * 3, TILE_SIZE * 3)
                 if not big_rect.collidepoint(slime[0]):
                     continue
@@ -398,21 +411,23 @@ class App:
             self.screen.get_width() * 0.5 - level_size[0] * 0.5,
             self.screen.get_height() * 0.5 - level_size[1] * 0.5,
         )
-        if self.player.mode == "shotgun" and pygame.mouse.get_focused():
-            # get shotgun screen space position
-            ss_pos = pygame.Vector2(self.player.get_rect().centerx, self.player.get_rect().centery + 4)
 
-            mouse_pos = pygame.Vector2(pygame.mouse.get_pos())
-            mouse_pos /= SCALE
-            mouse_pos -= self.level_surf_pos
-            mouse_pos /= self.ls_scale
-            d = mouse_pos- ss_pos
-            self.player.shotgun.angle = math.atan2(-d.y, d.x) - math.pi * 0.5
-            self.player.shotgun.flipped = mouse_pos.x > self.player.get_rect().centerx
-            self.player.flip = not self.player.shotgun.flipped
-        else:
-            self.player.shotgun.angle += (math.pi * 0.5 * (int(self.player.flip) * 2 - 1) - self.player.shotgun.angle) * 0.3 * self.dt
-            self.player.shotgun.flipped = not self.player.flip
+        if not self.player.dead:
+            if self.player.mode == "shotgun" and pygame.mouse.get_focused():
+                # get shotgun screen space position
+                ss_pos = pygame.Vector2(self.player.get_rect().centerx, self.player.get_rect().centery + 4)
+
+                mouse_pos = pygame.Vector2(pygame.mouse.get_pos())
+                mouse_pos /= SCALE
+                mouse_pos -= self.level_surf_pos
+                mouse_pos /= self.ls_scale
+                d = mouse_pos- ss_pos
+                self.player.shotgun.angle = math.atan2(-d.y, d.x) - math.pi * 0.5
+                self.player.shotgun.flipped = mouse_pos.x > self.player.get_rect().centerx
+                self.player.flip = not self.player.shotgun.flipped
+            else:
+                self.player.shotgun.angle += (math.pi * 0.5 * (int(self.player.flip) * 2 - 1) - self.player.shotgun.angle) * 0.3 * self.dt
+                self.player.shotgun.flipped = not self.player.flip
         
         self.screen.blit(pygame.transform.scale(self.level_surf, level_size), self.level_surf_pos)
 
