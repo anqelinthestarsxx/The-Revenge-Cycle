@@ -7,6 +7,7 @@ from src.tiles import *
 from src.player import Player
 from src.enemies import Enemy
 from src.particles import *
+from src.anim import Anim
 
 import pygame.gfxdraw
 
@@ -175,6 +176,27 @@ class App:
         self.wheel_scale = 1
         self.wheel_scale_vel = 0
         self.spin_alpha = 1
+
+        self.attack_anim = Anim(self.assets["player"][self.player.color]["punch"].copy(), 0.2, True)
+        for i, img in enumerate(self.attack_anim.animation):
+            surf = pygame.Surface((img.get_width() + 2, img.get_height() + 2))
+            mask = pygame.mask.from_surface(img)
+            msurf = mask.to_surface(setcolor=(219, 224, 231), unsetcolor=(0, 0, 0, 0))
+            for offset in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                surf.blit(msurf, (1 + offset[0], 1 + offset[1]))
+            surf.blit(img, (1, 1))
+            surf.set_colorkey((0, 0, 0))
+            self.attack_anim.animation[i] = surf.copy()
+        
+        rot_surf = pygame.transform.rotate(self.assets["player"]["shotgun"], -90)
+        self.shotgun_item = pygame.Surface((rot_surf.get_width() + 2, rot_surf.get_height() + 2))
+        mask = pygame.mask.from_surface(rot_surf)
+        msurf = mask.to_surface(setcolor=(247, 172, 55), unsetcolor=(0, 0, 0, 0))
+        for offset in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            self.shotgun_item.blit(msurf, (1 + offset[0], 1 + offset[1]))
+        self.shotgun_item.blit(rot_surf, (1, 1))
+        self.shotgun_item.set_colorkey((0, 0, 0))
+
     
     def menu(self):
         level_size = (self.level_surf.get_width() * self.ls_scale, self.level_surf.get_height() * self.ls_scale)
@@ -315,16 +337,53 @@ class App:
         radius = min(self.ui_surf.get_height(), self.ui_surf.get_width()) * 0.4 * self.wheel_scale / (self.wheel_vel * 0.1 + 1)
         colors =  [(120, 31, 44), (237, 82, 89), (247, 172, 55), (180, 94, 179)]
         center = [self.ui_surf.get_width() * 0.5, self.ui_surf.get_height() * 0.5]
+        shadow_length = 4
         for i in range(4):
             points = []
-
+            points.append([center[0], center[1] + shadow_length])
+            start_angle = self.wheel_angle + math.pi * 0.5 * i
+            for j in range(segments + 1):
+                angle = start_angle + j/segments * math.pi * 0.5
+                points.append([center[0] + math.cos(angle) * radius, center[1] + math.sin(angle) * radius + shadow_length])
+            pygame.draw.polygon(self.ui_surf, pygame.Color(colors[i][0], colors[i][1], colors[i][2]).lerp((20, 16, 32), 0.7), points)
+        for i in range(4):
+            points = []
             points.append(center)
             start_angle = self.wheel_angle + math.pi * 0.5 * i
             for j in range(segments + 1):
                 angle = start_angle + j/segments * math.pi * 0.5
                 points.append([center[0] + math.cos(angle) * radius, center[1] + math.sin(angle) * radius])
             pygame.draw.polygon(self.ui_surf, colors[i], points)
+            
+            surf = pygame.Surface((40, 40), pygame.SRCALPHA).convert_alpha()
+            surf.fill((0, 0, 0, 0))
+            pygame.draw.rect(surf, (38, 36, 58), (0, 0, surf.get_width(), surf.get_height()), border_radius=10)
+            surf.set_alpha(255 / (self.wheel_vel * 5 + 1) * 0.5)
+            self.ui_surf.blit(surf, (center[0] + math.cos(start_angle + math.pi * 0.25) * radius * 0.65 - surf.get_width() * 0.5,
+                                    center[1] + math.sin(start_angle + math.pi * 0.25) * radius * 0.65 - surf.get_height() * 0.5 + shadow_length))
+            pygame.draw.rect(surf, (219, 224, 231), (0, 0, surf.get_width(), surf.get_height()), border_radius=10, width=2)
+            if i == 0:
+                surf.blit(pygame.transform.scale(self.assets["player"]["pepper"], (14, 26)), (surf.get_width() * 0.5 - 7, surf.get_height() * .5 - 13))
+                if random.random() / self.dt + self.wheel_vel < 0.1:
+                    self.smoke.append([list((center[0] + math.cos(start_angle + math.pi * 0.25) * radius * 0.65 - surf.get_width() * 0.5 + 20,
+                                    center[1] + math.sin(start_angle + math.pi * 0.25) * radius * 0.65 - surf.get_height() * 0.5 + 20)),[random.random() - 0.5, -random.random() - 0.5], 1, random.randint(200, 255), 0, random.randint(0, 360), random.choice([(237, 82, 89), (196, 44, 54), (120, 31, 44)])])
+            elif i == 1:
+                self.attack_anim.update(self.dt)
+                self.attack_anim.draw(surf, (0, 0), (surf.get_width() * 0.5 - 17, surf.get_height() * 0.5 - 17))
+            elif i == 2:
+                surf.blit(self.shotgun_item, (surf.get_width() * 0.5 - 24, surf.get_height() * 0.5 - self.shotgun_item.get_height() * 0.5 + math.cos(self.time * 0.1) * 2))
+            elif i == 3:
+                img = self.assets["player"]["knife"]
+                img_copy = pygame.transform.rotate(pygame.transform.scale2x(img), -45)
+                surf.blit(img_copy, (-5, 1 + math.sin(self.time * 0.1) * 2))
+            surf.set_alpha(255 / (self.wheel_vel * 5 + 1))
+            self.ui_surf.blit(surf, (center[0] + math.cos(start_angle + math.pi * 0.25) * radius * 0.65 - surf.get_width() * 0.5,
+                                    center[1] + math.sin(start_angle + math.pi * 0.25) * radius * 0.65 - surf.get_height() * 0.5))
+        
+
         pygame.draw.circle(self.ui_surf, (20, 16, 32), center, 10 * self.wheel_scale / (self.wheel_vel + 1) + math.sin(time.time() * 5))
+
+        self.ui_surf.fblits([self.calc_smoke(smoke, [0, 0]) for smoke in self.smoke.copy()])
 
         pygame.draw.rect(self.ui_surf, (20, 16, 32), (0, 0, self.ui_surf.get_width(), self.ui_surf.get_height() * 1.6 * self.fade))
 
