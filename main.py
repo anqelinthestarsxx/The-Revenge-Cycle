@@ -171,11 +171,12 @@ class App:
         self.text_idx = 0
         self.text_timer = 0
 
-        self.wheel_angle = math.radians(math.floor(random.random() * 1000 / 45) * 45)
+        self.wheel_angle = math.radians(math.floor(random.random() * 1000 / 90) * 90)
         self.wheel_vel = 0
         self.wheel_scale = 1
         self.wheel_scale_vel = 0
         self.spin_alpha = 1
+        self.wheel_text = ""
 
         self.attack_anim = Anim(self.assets["player"][self.player.color]["punch"].copy(), 0.2, True)
         for i, img in enumerate(self.attack_anim.animation):
@@ -316,7 +317,7 @@ class App:
         self.ui_surf.blit(font_surf, (self.ui_surf.get_width() * 0.5 - font_surf.get_width() * 0.5, 8))
         font_surf = self.bold_font.render("Press [ENTER] to spin!", False, (219, 224, 231))
         if self.spin_alpha < 1:
-            self.spin_alpha = max(0, self.spin_alpha - 0.0167 * self.dt)
+            self.spin_alpha = max(0, self.spin_alpha - 0.167 * self.dt)
         font_surf.set_alpha(255 * self.spin_alpha)
         self.ui_surf.blit(font_surf, (self.ui_surf.get_width() * 0.5 - font_surf.get_width() * 0.5, self.ui_surf.get_height() - 16))
 
@@ -362,26 +363,55 @@ class App:
             self.ui_surf.blit(surf, (center[0] + math.cos(start_angle + math.pi * 0.25) * radius * 0.65 - surf.get_width() * 0.5,
                                     center[1] + math.sin(start_angle + math.pi * 0.25) * radius * 0.65 - surf.get_height() * 0.5 + shadow_length))
             pygame.draw.rect(surf, (219, 224, 231), (0, 0, surf.get_width(), surf.get_height()), border_radius=10, width=2)
+            font_surf = self.bold_font.render("Boning Knife", False, (219, 224, 231))
             if i == 0:
+                font_surf = self.bold_font.render("Chilli Bomb", False, (219, 224, 231))
                 surf.blit(pygame.transform.scale(self.assets["player"]["pepper"], (14, 26)), (surf.get_width() * 0.5 - 7, surf.get_height() * .5 - 13))
                 if random.random() / self.dt + self.wheel_vel < 0.1:
                     self.smoke.append([list((center[0] + math.cos(start_angle + math.pi * 0.25) * radius * 0.65 - surf.get_width() * 0.5 + 20,
                                     center[1] + math.sin(start_angle + math.pi * 0.25) * radius * 0.65 - surf.get_height() * 0.5 + 20)),[random.random() - 0.5, -random.random() - 0.5], 1, random.randint(200, 255), 0, random.randint(0, 360), random.choice([(237, 82, 89), (196, 44, 54), (120, 31, 44)])])
             elif i == 1:
+                font_surf = self.bold_font.render("Bare Hands", False, (219, 224, 231))
                 self.attack_anim.update(self.dt)
                 self.attack_anim.draw(surf, (0, 0), (surf.get_width() * 0.5 - 17, surf.get_height() * 0.5 - 17))
             elif i == 2:
+                font_surf = self.bold_font.render("Shotgun", False, (219, 224, 231))
                 surf.blit(self.shotgun_item, (surf.get_width() * 0.5 - 24, surf.get_height() * 0.5 - self.shotgun_item.get_height() * 0.5 + math.cos(self.time * 0.1) * 2))
             elif i == 3:
                 img = self.assets["player"]["knife"]
                 img_copy = pygame.transform.rotate(pygame.transform.scale2x(img), -45)
                 surf.blit(img_copy, (-5, 1 + math.sin(self.time * 0.1) * 2))
+
+            font_surf.set_alpha(255 * self.spin_alpha)
+            self.ui_surf.blit(font_surf, (center[0] - font_surf.get_width() * 0.5 + math.cos(start_angle + math.pi * 0.25) * radius * 1.25, center[1] + math.sin(start_angle + math.pi * 0.25) * radius * 1.25 - font_surf.get_height() * 0.5))
             surf.set_alpha(255 / (self.wheel_vel * 5 + 1))
             self.ui_surf.blit(surf, (center[0] + math.cos(start_angle + math.pi * 0.25) * radius * 0.65 - surf.get_width() * 0.5,
                                     center[1] + math.sin(start_angle + math.pi * 0.25) * radius * 0.65 - surf.get_height() * 0.5))
         
 
         pygame.draw.circle(self.ui_surf, (20, 16, 32), center, 10 * self.wheel_scale / (self.wheel_vel + 1) + math.sin(time.time() * 5))
+
+        # radius = min(self.ui_surf.get_height(), self.ui_surf.get_width()) * 0.4
+        pygame.gfxdraw.filled_trigon(self.ui_surf, int(center[0] + radius - 5), int(center[1]), int(center[0] + radius + 5), int(center[1] - 5), int(center[0] + radius + 5), int(center[1] + 5), (38, 36, 58))
+        pygame.gfxdraw.trigon(self.ui_surf, int(center[0] + radius - 5), int(center[1]), int(center[0] + radius + 5), int(center[1] - 5), int(center[0] + radius + 5), int(center[1] + 5), (219, 224, 231))
+
+        if self.wheel_vel < 0.001 and self.spin_alpha < 1:
+            idx = 0
+            min_dist = 12232
+            for i in range(4):
+                angle = self.wheel_angle + math.pi * 0.5 * i + math.pi * 0.25
+                dist = (center[0] + math.cos(angle) * radius - (center[0] + radius)) ** 2 + (center[1] + math.sin(angle) * radius - center[1])
+                if dist < min_dist:
+                    min_dist = dist
+                    idx = i
+                
+            if self.wheel_text == "":
+                self.wheel_text = [random.choice(["blow stuff up!", "paint it red!"]), random.choice(["kick some ass!", "mess up those scurvy dogs!"]), random.choice(["hunt down some civilians!", "shoot upstanding citizens!"]), random.choice(["gut them like a fish!", "spill their intestines!"])][idx]
+            font_surf = self.bold_font.render(f"Press [ENTER] to {self.wheel_text}", False, colors[idx])
+            # mask = font_surf.
+            self.ui_surf.blit(font_surf, (self.ui_surf.get_width() * 0.5 - font_surf.get_width() * 0.5, self.ui_surf.get_height() - 16))
+            
+        
 
         self.ui_surf.fblits([self.calc_smoke(smoke, [0, 0]) for smoke in self.smoke.copy()])
 
@@ -905,6 +935,7 @@ class App:
                                 self.wheel_vel = math.pi * 0.3 + random.random() * math.pi
                                 self.spin_alpha = 0.99
                                 self.wheel_scale = 0.8
+                                self.wheel_text = ""
                             elif self.wheel_vel < 0.001:
                                 self.fade_dir = 1
                 elif event.type == pygame.KEYUP:
