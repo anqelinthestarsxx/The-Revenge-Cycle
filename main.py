@@ -12,8 +12,8 @@ pygame.init()
 pygame.mixer.init()
 pygame.font.init()
 
-SERIES_1 = ["data/maps/0.json", "data/maps/1.json", "data/maps/2.json"]
-SERIES_2 = ["data/maps/3.json", "data/maps/4.json", "data/maps/5.json"]
+SERIES_1 = [["data/maps/0.json", "Outside 'The Vista'"], ["data/maps/1.json", "The Vista"], ["data/maps/2.json", "Bart's Kitchen"]]
+SERIES_2 = [["data/maps/3.json", "Outside 'Sérénité'"], ["data/maps/4.json", "Sérénité"], ["data/maps/5.json", "Elsa's Kitchen"]]
 
 class App:
     def __init__(self):
@@ -103,6 +103,8 @@ class App:
             "background": load_image("background.png")
         }
 
+        self.font = load_font("dogicapixelbold.ttf", size=8)
+
         self.tile_map = TileMap(self)
         self.tile_map.load("data/maps/0.json")
 
@@ -143,6 +145,11 @@ class App:
         self.level_complete = False
         self.series = 0
         self.level = 0
+
+        self.state = "menu"
+    
+    def menu(self):
+        pass
     
     def next_level(self):
         self.level += 1
@@ -150,7 +157,7 @@ class App:
             self.series = (self.series + 1) % 2
             self.level = 0
         series = SERIES_1 if self.series == 0 else SERIES_2
-        self.tile_map.load(series[self.level])
+        self.tile_map.load(series[self.level][0])
 
         # extract enemies
         self.enemies = []
@@ -542,10 +549,15 @@ class App:
         self.ui_render_surf.fill((0, 0, 0))
         self.ui_surf.fill((0, 0, 0))
 
+        pygame.draw.rect(self.ui_surf, (20, 16, 32), (0, 0, self.ui_surf.get_width(), TILE_SIZE - 1))
+        series = SERIES_1 if self.series == 0 else SERIES_2
+        font_surf = self.font.render(series[self.level][1], False, (219, 224, 231))
+        self.ui_surf.blit(font_surf, (self.ui_surf.get_width() * 0.5 - font_surf.get_width() * 0.5, 4))
+
         if self.player.finished and not (self.fade_dir == 1):
             self.fade_dir = 1
     
-        self.fade = pygame.math.clamp(self.fade + self.fade_dir * self.dt * 0.03, 0, 1)
+        self.fade = pygame.math.clamp(self.fade + self.fade_dir * self.dt * 0.014, 0, 1)
         if self.fade_dir == 1 and self.fade == 1:
             self.next_level()
             self.fade_dir = -1
@@ -553,8 +565,7 @@ class App:
         if self.fade == 0 and self.fade_dir == -1:
             self.fade_dir = 0
 
-        pygame.draw.rect(self.ui_surf, (20, 16, 32), (0, 0, self.ui_surf.get_width(), self.ui_surf.get_height() * 0.5 * self.fade))
-        pygame.draw.rect(self.ui_surf, (20, 16, 32), (0, self.ui_surf.get_height() * 0.5 + (1 - self.fade) * self.ui_surf.get_height() * 0.5, self.ui_surf.get_width(), self.ui_surf.get_height() * 0.5 * self.fade))
+        pygame.draw.rect(self.ui_surf, (20, 16, 32), (0, 0, self.ui_surf.get_width(), self.ui_surf.get_height() * 1.6 * self.fade))
 
         self.ui_render_surf.blit(pygame.transform.scale(self.ui_surf, level_size), self.level_surf_pos)
         self.uiTex.write(self.ui_render_surf.get_view('1'))

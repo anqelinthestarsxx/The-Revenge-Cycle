@@ -33,7 +33,6 @@ class TileMap:
             try:
                 img = self.app.assets[f"tiles/{tile['type']}"][tile["variant"]].copy()
             except KeyError:
-                print(tile)
                 pass
             self.tile_map[tile_loc] = {
                 "type": tile["type"],

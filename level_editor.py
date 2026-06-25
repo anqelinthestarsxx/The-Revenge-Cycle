@@ -8,7 +8,7 @@ SCR_HEIGHT = 1200
 SCALE = 2 # screen scaling
 
 # json map path
-MAP = "data/maps/5.json"
+MAP = "data/maps/2.json"
 
 # tile sets that can be autotiled
 AUTO_TILE_TYPES = {"grass", "kitchen", "wood"}
