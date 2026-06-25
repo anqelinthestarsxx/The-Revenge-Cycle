@@ -43,7 +43,7 @@ class TileMap:
                 "mask": pygame.mask.from_surface(img) if img else None,
             }
             if img != None:
-                self.tile_map[tile_loc]["mask_surf"] = self.tile_map[tile_loc]["mask"].to_surface(setcolor=(0, 0, 0, 0), unsetcolor=(255, 0, 0))
+                self.tile_map[tile_loc]["mask_surf"] = self.tile_map[tile_loc]["mask"].to_surface(setcolor=(0, 0, 0, 0), unsetcolor=(0, 255, 0))
         self.player_pos = data["level"]["player_pos"]
 
         # load off grid tiles
