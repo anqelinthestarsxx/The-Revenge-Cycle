@@ -168,7 +168,12 @@ class App:
         self.ui_render_surf.fill((0, 0, 0))
         self.ui_surf.fill((0, 0, 0))
 
-        self.ui_surf.blit(self.assets["logo"], (self.ui_surf.get_width() * 0.5 - self.assets["logo"].get_width() * 0.5, self.ui_surf.get_height() * 0.5 - self.assets["logo"].get_height() * 0.5))
+        self.ui_surf.blit(self.assets["logo"], (self.ui_surf.get_width() * 0.5 - self.assets["logo"].get_width() * 0.5, self.ui_surf.get_height() * 0.5 - self.assets["logo"].get_height() * 0.5 + math.sin(time.time() * 1) * 5 - TILE_SIZE + max(0, 30 - self.time) * 50))
+
+        if self.time * 0.02 % 2 < 1.54:
+            font_surf = self.font.render("Press [ENTER] to begin!", False, (219, 224, 231))
+            self.ui_surf.blit(font_surf, (self.ui_surf.get_width() * 0.5 - font_surf.get_width() * 0.5, self.ui_surf.get_height() * 0.6+ max(0,  30 - self.time) * 50))
+
     
         self.fade = pygame.math.clamp(self.fade + self.fade_dir * self.dt * 0.014, 0, 1)
         if self.fade_dir == 1 and self.fade == 1:
@@ -193,7 +198,6 @@ class App:
         self.prog["levelScale"].value = self.ls_scale
 
     def talk(self):
-        
         level_size = (self.level_surf.get_width() * self.ls_scale, self.level_surf.get_height() * self.ls_scale)
         self.level_surf_pos = pygame.Vector2(
             self.screen.get_width() * 0.5 - level_size[0] * 0.5,
@@ -676,18 +680,54 @@ class App:
                     self.setup_framebuffer()
 
                 elif event.type == pygame.KEYDOWN:
-                    if event.key in {pygame.K_UP, pygame.K_SPACE, pygame.K_w}:
-                        self.player.controls["up"] = True
-                        if self.player.falling < 5:
-                            self.player.jumping = 0
-                            self.player.falling = 873745
-                    elif event.key in {pygame.K_DOWN, pygame.K_s}:
-                        self.player.controls["down"] = True
-                    elif event.key in {pygame.K_LEFT, pygame.K_a}:
-                        self.player.controls["left"] = True
-                    elif event.key in {pygame.K_RIGHT, pygame.K_d}:
-                        self.player.controls["right"] = True
-                    elif event.key in {pygame.K_x}:
+                    if self.state == "game":
+                        if event.key in {pygame.K_UP, pygame.K_SPACE, pygame.K_w}:
+                            self.player.controls["up"] = True
+                            if self.player.falling < 5:
+                                self.player.jumping = 0
+                                self.player.falling = 873745
+                        elif event.key in {pygame.K_DOWN, pygame.K_s}:
+                            self.player.controls["down"] = True
+                        elif event.key in {pygame.K_LEFT, pygame.K_a}:
+                            self.player.controls["left"] = True
+                        elif event.key in {pygame.K_RIGHT, pygame.K_d}:
+                            self.player.controls["right"] = True
+                        elif event.key in {pygame.K_x}:
+                            if self.player.mode == "sword":
+                                if self.player.sword.attacked > 10:
+                                    self.player.sword.attack()
+                                self.player.sword.update()
+                            elif self.player.mode == "shotgun":
+                                self.player.shotgun.shoot()
+                            elif self.player.mode == "pepper":
+                                if pygame.mouse.get_focused():
+                                    mouse_pos = pygame.Vector2(pygame.mouse.get_pos())
+                                    mouse_pos /= SCALE
+                                    mouse_pos -= self.level_surf_pos
+                                    mouse_pos /= self.ls_scale
+                                    self.player.pepper.shoot(mouse_pos)
+                                else:
+                                    self.player.pepper.shoot(pygame.Vector2(self.player.pepper.pos) + pygame.Vector2(300 * -(2 * int(self.player.flip) - 1), -5))
+                            elif self.player.mode == "fists" and not self.player.attacking:
+                                self.player.punch.reset()
+                                self.player.attacking = True
+                        elif event.key == pygame.K_z:
+                            self.player.die(pygame.Vector2(0, 5), self.player.pos - pygame.Vector2(5, 5))
+                    elif self.state == "menu":
+                        if event.key == pygame.K_RETURN:
+                            self.fade_dir = 1
+                elif event.type == pygame.KEYUP:
+                    if self.state == "game":
+                        if event.key in {pygame.K_UP, pygame.K_SPACE, pygame.K_w}:
+                            self.player.release_jump()
+                        elif event.key in {pygame.K_DOWN, pygame.K_s}:
+                            self.player.controls["down"] = False
+                        elif event.key in {pygame.K_LEFT, pygame.K_a}:
+                            self.player.controls["left"] = False
+                        elif event.key in {pygame.K_RIGHT, pygame.K_d}:
+                            self.player.controls["right"] = False
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if self.state == "game":
                         if self.player.mode == "sword":
                             if self.player.sword.attacked > 10:
                                 self.player.sword.attack()
@@ -695,44 +735,14 @@ class App:
                         elif self.player.mode == "shotgun":
                             self.player.shotgun.shoot()
                         elif self.player.mode == "pepper":
-                            if pygame.mouse.get_focused():
-                                mouse_pos = pygame.Vector2(pygame.mouse.get_pos())
-                                mouse_pos /= SCALE
-                                mouse_pos -= self.level_surf_pos
-                                mouse_pos /= self.ls_scale
-                                self.player.pepper.shoot(mouse_pos)
-                            else:
-                                self.player.pepper.shoot(pygame.Vector2(self.player.pepper.pos) + pygame.Vector2(300 * -(2 * int(self.player.flip) - 1), -5))
+                            mouse_pos = pygame.Vector2(pygame.mouse.get_pos())
+                            mouse_pos /= SCALE
+                            mouse_pos -= self.level_surf_pos
+                            mouse_pos /= self.ls_scale
+                            self.player.pepper.shoot(mouse_pos)
                         elif self.player.mode == "fists" and not self.player.attacking:
                             self.player.punch.reset()
                             self.player.attacking = True
-                    elif event.key == pygame.K_z:
-                        self.player.die(pygame.Vector2(0, 5), self.player.pos - pygame.Vector2(5, 5))
-                elif event.type == pygame.KEYUP:
-                    if event.key in {pygame.K_UP, pygame.K_SPACE, pygame.K_w}:
-                        self.player.release_jump()
-                    elif event.key in {pygame.K_DOWN, pygame.K_s}:
-                        self.player.controls["down"] = False
-                    elif event.key in {pygame.K_LEFT, pygame.K_a}:
-                        self.player.controls["left"] = False
-                    elif event.key in {pygame.K_RIGHT, pygame.K_d}:
-                        self.player.controls["right"] = False
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    if self.player.mode == "sword":
-                        if self.player.sword.attacked > 10:
-                            self.player.sword.attack()
-                        self.player.sword.update()
-                    elif self.player.mode == "shotgun":
-                        self.player.shotgun.shoot()
-                    elif self.player.mode == "pepper":
-                        mouse_pos = pygame.Vector2(pygame.mouse.get_pos())
-                        mouse_pos /= SCALE
-                        mouse_pos -= self.level_surf_pos
-                        mouse_pos /= self.ls_scale
-                        self.player.pepper.shoot(mouse_pos)
-                    elif self.player.mode == "fists" and not self.player.attacking:
-                        self.player.punch.reset()
-                        self.player.attacking = True
                 elif event.type in {pygame.WINDOWEXPOSED, pygame.WINDOWMOVED, pygame.WINDOWRESIZED}:
                     self.last_time = time.time()
             
