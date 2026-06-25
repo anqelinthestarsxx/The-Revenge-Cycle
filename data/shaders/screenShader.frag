@@ -7,6 +7,11 @@ uniform sampler2D screenTex;
 uniform sampler2D lightTex;
 uniform sampler2D tileTex;
 uniform sampler2D uiTex;
+uniform sampler2D noiseTex;
+
+uniform int menu = 0;
+
+uniform float time;
 
 uniform float scrollX;
 uniform float scrollY;
@@ -35,8 +40,43 @@ void main() {
   }
 
   vec4 uiSample = texture(uiTex, TexCoord);
+
   if (uiSample.r + uiSample.b + uiSample.g > 0.01) {
     FragColor = vec4(uiSample.rgb, 1.0);
+    return;
+  } else if (menu > 0) {
+    float ar = scrWidth / scrHeight;
+    vec2 scroll = vec2(scrollX, scrollY);
+    vec2 levelOffset = vec2(levelX, levelY);
+    scrUV = floor(scrUV / levelScale) * levelScale;
+    vec2 levelPos = (scrUV - levelOffset) / levelScale;
+    vec2 uv = levelPos * 0.002;
+    // uv.y *= 0.5;
+    float noise_1 = texture(noiseTex, ar * (uv + vec2(0.0, time * 0.0005))).r;
+    float noise_2 = texture(noiseTex, ar * (uv + vec2(0.0, time * 0.00009))).r;
+    float noise_3 = texture(noiseTex, ar * (uv + vec2(0.0, time * 0.00004))).r;
+
+    vec2 center = vec2(levelW, levelH) / levelScale * 0.5;
+    float levelDist = distance(center, levelPos) / levelW * levelScale;
+    float n =
+        (noise_1 + noise_2 + noise_3) * 0.3333 * min(1.0, levelDist * 2.0);
+    // n = levelDist * 2.0 + n * 0.01;
+
+    vec3 color;
+    if (n < 0.3) {
+      color = vec3(0.0784, 0.0627, 0.125);
+    } else if (n < 0.4) {
+      color = vec3(0.208, 0.078, 0.157);
+    } else if (n < 0.5) {
+      color = vec3(0.0784, 0.0627, 0.125);
+    } else {
+      color = vec3(0.471, 0.1216, 0.1725);
+    }
+    // } else {
+    // color = vec3(0.769, 0.1725, 0.2118);
+    // }
+
+    FragColor = vec4(color, 1.0);
     return;
   }
 

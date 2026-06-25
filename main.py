@@ -17,6 +17,7 @@ SERIES_2 = [["data/maps/3.json", "Outside 'Sérénité'"], ["data/maps/4.json", 
 
 class App:
     def __init__(self):
+        self.time = 0
         print(f"Running from {get_script_path()}")
         pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MAJOR_VERSION, 4)
         pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MINOR_VERSION, 1)
@@ -100,8 +101,17 @@ class App:
             "particle/explosion": load_animation("particles/explosion.png", 5, 5, 15),
             "particle/particle": load_animation("particles/particle.png", 5, 5, 4),
             "clouds": load_imgs("clouds.png", (1, 2), (64, 32)),
-            "background": load_image("background.png")
+            "background": load_image("background.png"),
+            "logo": load_image("logo.png"),
+            "noise": load_image("noise.png")
         }
+
+        self.noiseTex = self.ctx.texture(self.assets["noise"].get_size(), 4)
+        self.noiseTex.filter = (moderngl.LINEAR, moderngl.LINEAR)
+        self.noiseTex.swizzle = "BGRA"
+        self.noiseTex.repeat_x = True
+        self.noiseTex.repeat_y = True
+        self.noiseTex.write(self.assets["noise"].get_view('1'))
 
         self.font = load_font("dogicapixelbold.ttf", size=8)
 
@@ -148,8 +158,72 @@ class App:
 
         self.state = "menu"
     
+    
     def menu(self):
-        pass
+        level_size = (self.level_surf.get_width() * self.ls_scale, self.level_surf.get_height() * self.ls_scale)
+        self.level_surf_pos = pygame.Vector2(
+            self.screen.get_width() * 0.5 - level_size[0] * 0.5,
+            self.screen.get_height() * 0.5 - level_size[1] * 0.5,
+        )
+        self.ui_render_surf.fill((0, 0, 0))
+        self.ui_surf.fill((0, 0, 0))
+
+        self.ui_surf.blit(self.assets["logo"], (self.ui_surf.get_width() * 0.5 - self.assets["logo"].get_width() * 0.5, self.ui_surf.get_height() * 0.5 - self.assets["logo"].get_height() * 0.5))
+    
+        self.fade = pygame.math.clamp(self.fade + self.fade_dir * self.dt * 0.014, 0, 1)
+        if self.fade_dir == 1 and self.fade == 1:
+            self.state = "talk"
+            self.fade_dir = -1
+        
+        if self.fade == 0 and self.fade_dir == -1:
+            self.fade_dir = 0
+
+        pygame.draw.rect(self.ui_surf, (20, 16, 32), (0, 0, self.ui_surf.get_width(), self.ui_surf.get_height() * 1.6 * self.fade))
+
+        self.ui_render_surf.blit(pygame.transform.scale(self.ui_surf, level_size), self.level_surf_pos)
+        self.uiTex.write(self.ui_render_surf.get_view('1'))
+        self.prog["scrollX"].value = 0
+        self.prog["scrollY"].value = 0
+        self.prog["scrWidth"].value = self.screen.get_width()
+        self.prog["scrHeight"].value = self.screen.get_height()
+        self.prog["levelX"].value = self.level_surf_pos.x
+        self.prog["levelY"].value = self.level_surf_pos.y
+        self.prog["levelW"].value = level_size[0]
+        self.prog["levelH"].value = level_size[1]
+        self.prog["levelScale"].value = self.ls_scale
+
+    def talk(self):
+        
+        level_size = (self.level_surf.get_width() * self.ls_scale, self.level_surf.get_height() * self.ls_scale)
+        self.level_surf_pos = pygame.Vector2(
+            self.screen.get_width() * 0.5 - level_size[0] * 0.5,
+            self.screen.get_height() * 0.5 - level_size[1] * 0.5,
+        )
+        self.ui_render_surf.fill((0, 0, 0))
+        self.ui_surf.fill((0, 0, 0))
+
+        self.fade = pygame.math.clamp(self.fade + self.fade_dir * self.dt * 0.014, 0, 1)
+        if self.fade_dir == 1 and self.fade == 1:
+            self.state = "game"
+            self.fade_dir = -1
+        
+        if self.fade == 0 and self.fade_dir == -1:
+            self.fade_dir = 0
+
+        pygame.draw.rect(self.ui_surf, (20, 16, 32), (0, 0, self.ui_surf.get_width(), self.ui_surf.get_height() * 1.6 * self.fade))
+
+        self.ui_render_surf.blit(pygame.transform.scale(self.ui_surf, level_size), self.level_surf_pos)
+        self.uiTex.write(self.ui_render_surf.get_view('1'))
+
+        self.prog["scrollX"].value = render_scroll[0]
+        self.prog["scrollY"].value = render_scroll[1]
+        self.prog["scrWidth"].value = self.screen.get_width()
+        self.prog["scrHeight"].value = self.screen.get_height()
+        self.prog["levelX"].value = self.level_surf_pos.x
+        self.prog["levelY"].value = self.level_surf_pos.y
+        self.prog["levelW"].value = level_size[0]
+        self.prog["levelH"].value = level_size[1]
+        self.prog["levelScale"].value = self.ls_scale
     
     def next_level(self):
         self.level += 1
@@ -404,6 +478,7 @@ class App:
         self.prog["lightTex"].value = 1
         self.prog["tileTex"].value = 2
         self.prog["uiTex"].value = 3
+        self.prog["noiseTex"].value = 4
 
         vertices = array.array("f", [-1.0, 1.0, 0.0, 0.0, -1.0, -1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, -1.0, 1.0, 1.0])
         self.vbo = self.ctx.buffer(vertices)
@@ -441,6 +516,9 @@ class App:
     def close(self):
         self.screenTex.release()
         self.lightTex.release()
+        self.uiTex.release()
+        self.tileTex.release()
+        self.noiseTex.release()
         pygame.quit()
         sys.exit()
     
@@ -663,8 +741,16 @@ class App:
             self.slomo = min(1.0, self.slomo + max(0.01, (1.0 - self.slomo) * 0.08) * self.dt)
             self.dt = min(self.dt, 3) * self.slomo # if you're under 20 fps you're screwed anyway
             self.last_time = time.time()
+            self.time += self.dt
 
-            self.update()
+            if self.state == "game":
+                self.update()
+            elif self.state == "menu":
+                self.menu()
+            elif self.state == "talk":
+                self.talk()
+            
+            self.prog["menu"] = int(self.state != "game")
             self.screenTex.write(self.screen.get_view('1')) # update opengl texture using pygame surface data
             self.tileTex.write(self.tileSurf.get_view('1'))
 
@@ -675,6 +761,8 @@ class App:
             self.prog["tintFactor"] = self.slomo * 0.25 + 0.75
             self.tileTex.use(2)
             self.uiTex.use(3)
+            self.noiseTex.use(4)
+            self.prog["time"] = -self.time * 0.25
             self.vao.render(moderngl.TRIANGLE_STRIP) # render screen quad
 
             pygame.display.flip()
