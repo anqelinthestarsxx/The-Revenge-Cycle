@@ -106,7 +106,9 @@ class App:
             "clouds": load_imgs("clouds.png", (1, 2), (64, 32)),
             "background": load_image("background.png"),
             "logo": load_image("logo.png"),
-            "noise": load_image("noise.png")
+            "noise": load_image("noise.png"),
+            "kitchen_bg": load_image("backgrounds/kitchen-bg.png"),
+            "restaurant_bg": load_image("backgrounds/restaurant-bg.png")
         }
 
         self.noiseTex = self.ctx.texture(self.assets["noise"].get_size(), 4)
@@ -277,12 +279,37 @@ class App:
         self.fade = pygame.math.clamp(self.fade + self.fade_dir * self.dt * 0.014, 0, 1)
         if self.fade_dir == 1 and self.fade == 1:
             self.state = "spin"
+            self.wheel_angle = math.radians(math.floor(random.random() * 1000 / 90) * 90)
+            self.wheel_vel = 0
+            self.wheel_scale = 1
+            self.wheel_scale_vel = 0
+            self.spin_alpha = 1
+            self.wheel_text = ""
             self.fade_dir = -1
         
         if self.fade == 0 and self.fade_dir == -1:
             self.fade_dir = 0
 
         padding = 4
+
+        if self.texts_idx == len(self.text):
+            pygame.draw.rect(self.ui_surf, (20, 16, 32), (0, 0, self.ui_surf.get_width(), self.ui_surf.get_height() * 1.6 * self.fade))
+
+            self.ui_render_surf.blit(pygame.transform.scale(self.ui_surf, level_size), self.level_surf_pos)
+            self.uiTex.write(self.ui_render_surf.get_view('1'))
+
+            self.prog["scrollX"].value = 0
+            self.prog["scrollY"].value = 0
+            self.prog["scrWidth"].value = self.screen.get_width()
+            self.prog["scrHeight"].value = self.screen.get_height()
+            self.prog["levelX"].value = self.level_surf_pos.x
+            self.prog["levelY"].value = self.level_surf_pos.y
+            self.prog["levelW"].value = level_size[0]
+            self.prog["levelH"].value = level_size[1]
+            self.prog["levelScale"].value = self.ls_scale
+
+            self.state = "spin"
+            return
 
         if self.time * 0.02 % 2 < 1.54:
             font_surf = self.bold_font.render("Press [ENTER] to continue", False, (219, 224, 231))
@@ -516,10 +543,16 @@ class App:
     def next_level(self):
         orig_series = self.series
         self.level += 1
+        series = SERIES_1 if self.series == 0 else SERIES_2
         if self.level > 2:
             self.series = (self.series + 1) % 2
             self.level = 0
         series = SERIES_1 if self.series == 0 else SERIES_2
+        if self.series != orig_series:
+            self.state = "talk"
+            self.texts_idx += 1
+            self.fade_dir = -1
+            self.text_idx = 0
         self.tile_map.load(series[self.level][0])
 
         # extract enemies
@@ -559,10 +592,6 @@ class App:
 
         self.level_complete = False
 
-        if self.series != orig_series:
-            self.state = "talk"
-            self.texts_idx += 1
-            self.fade_dir = -1
    
     def update_fireflies(self, scroll):
         for fly in self.fireflies:
@@ -839,13 +868,19 @@ class App:
         # render to screen
         self.screen.fill((14, 130, 206))
         # self.level_surf.fill((14, 130, 206))
-        self.level_surf.blit(pygame.transform.scale(self.assets["background"], self.level_surf.get_size()), (0, 0))
 
-        for cloud in self.clouds:
-            cloud[0] += self.dt * cloud[3] * 0.1
-            
-            pos = [cloud[0] % (self.level_surf.get_width() + 128) - 64, cloud[1] % (self.level_surf.get_height() * 0.5 + 64) - 32]
-            self.level_surf.blit(self.assets["clouds"][cloud[2]], pos)
+        if self.level in {0, 3}:
+            self.level_surf.blit(pygame.transform.scale(self.assets["background"], self.level_surf.get_size()), (0, 0))
+
+            for cloud in self.clouds:
+                cloud[0] += self.dt * cloud[3] * 0.1
+                
+                pos = [cloud[0] % (self.level_surf.get_width() + 128) - 64, cloud[1] % (self.level_surf.get_height() * 0.5 + 64) - 32]
+                self.level_surf.blit(self.assets["clouds"][cloud[2]], pos)
+        elif self.level in {1, 4}:
+            self.level_surf.blit(pygame.transform.scale(self.assets["restaurant_bg"], self.level_surf.get_size()), (0, 0))
+        elif self.level in {2, 5}:
+            self.level_surf.blit(pygame.transform.scale(self.assets["kitchen_bg"], self.level_surf.get_size()), (0, 0))
 
         screen_shake_offset = (
             (random.random() - 0.5) * self.screen_shake,
@@ -933,6 +968,7 @@ class App:
         self.fade = pygame.math.clamp(self.fade + self.fade_dir * self.dt * 0.014, 0, 1)
         if self.fade_dir == 1 and self.fade == 1:
             self.next_level()
+            self.fade_dir = -1
 
         if self.fade == 0 and self.fade_dir == -1:
             self.fade_dir = 0

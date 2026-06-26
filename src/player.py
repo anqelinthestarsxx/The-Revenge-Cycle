@@ -438,7 +438,7 @@ class Player:
         if not self.dead:
             impact = pygame.Vector2(impact)
             impact_point = pygame.Vector2(impact_point)
-            self.dead = True
+            # self.dead = True
 
             self.app.slomo = 0.1
 
