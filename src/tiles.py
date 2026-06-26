@@ -43,6 +43,7 @@ class TileMap:
             }
             if img != None:
                 self.tile_map[tile_loc]["mask_surf"] = self.tile_map[tile_loc]["mask"].to_surface(setcolor=(0, 0, 0, 0), unsetcolor=(0, 255, 0))
+        self.extract_grass()
         self.player_pos = data["level"]["player_pos"]
 
         # load off grid tiles
@@ -59,6 +60,7 @@ class TileMap:
         
         # self.extract_grass()
         self.calculate_light_map()
+
     
     # avoid doing this too much (O(n) comparisons)
     def get_closest_node_id(self, pos):
@@ -149,12 +151,13 @@ class TileMap:
 
     def draw_decor(self, surf, scroll):
         for tile in self.off_grid:
+            # print(tile)
             surf.blit(
                 self.app.assets[f"tiles/{tile['type']}"][tile["variant"]], (tile["pos"][0] - scroll[0], tile["pos"][1] - scroll[1])
             )
 
     def draw(self, surf, scroll):
-        # self.grass_manager.draw(surf, (scroll[0] + 8, scroll[1] - 3))
+        self.grass_manager.draw(surf, (scroll[0] + 8, scroll[1] - 8))
         for x in range(scroll[0] // TILE_SIZE, (scroll[0] + surf.get_width()) // TILE_SIZE + 1):
             for y in range(scroll[1] // TILE_SIZE, (scroll[1] + surf.get_height()) // TILE_SIZE + 1):
                 loc = str(x) + ";" + str(y)

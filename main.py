@@ -54,6 +54,12 @@ class App:
             'tiles/grass': load_tile_imgs('tiles/grass.png', 16),
             'tiles/kitchen': load_tile_imgs('tiles/kitchen.png', 16),
             'tiles/wood': load_tile_imgs('tiles/wood.png', 16),
+            "tiles/kitchen_decor": [load_image("appliances/dishwasher.png"), load_image("appliances/fridgey.png"), load_image("appliances/little-oven.png"), load_image("appliances/mini-fryer.png")],
+            "particle/leaf": load_animation("particles/leaf.png", 8, 8, 17),
+            "tiles/table": [load_image("tiles/table.png")],
+            "tiles/table2": load_animation("tiles/table2.png", 32, 32, 6),
+            "tiles/tree": load_animation("tiles/tree.png", 32, 32, 2),
+            "grass": load_animation("grass.png", 17, 17, 10),
             'player': {
                 "black": {
                     "idle": load_animation("player/black/idle.png", 15, 31, 4),
@@ -108,7 +114,8 @@ class App:
             "logo": load_image("logo.png"),
             "noise": load_image("noise.png"),
             "kitchen_bg": load_image("backgrounds/kitchen-bg.png"),
-            "restaurant_bg": load_image("backgrounds/restaurant-bg.png")
+            "restaurant_bg": load_image("woodgrain.png"),
+            "restaurant_bg2": load_image("backgrounds/restaurant-bg-no-plants.png"),
         }
 
         self.noiseTex = self.ctx.texture(self.assets["noise"].get_size(), 4)
@@ -156,13 +163,17 @@ class App:
             self.clouds.append([random.random() * 10000, random.random() * 10000, random.choice([0, 1]), random.random() * 0.5 + 0.25])
         self.clouds.sort(key=lambda x: -x[3])
 
+        self.leaf_spawners = []
+        for tree in self.tile_map.extract([("tree", 0), ("tree", 1)], keep=True):
+            self.leaf_spawners.append((pygame.Rect(tree['pos'][0] + 5, tree['pos'][1] + 5, 21, 13), True))
+
         self.slomo = 1.0
 
         self.level_complete = False
         self.series = 0
         self.level = 0
 
-        self.state = "menu"
+        self.state = "game"
 
         self.text = [[
             "Food is a very serious business...", 
@@ -498,6 +509,7 @@ class App:
         pygame.gfxdraw.trigon(self.ui_surf, int(center[0] + radius - 5), int(center[1]), int(center[0] + radius + 5), int(center[1] - 5), int(center[0] + radius + 5), int(center[1] + 5), (219, 224, 231))
 
         if self.wheel_vel < 0.001 and self.spin_alpha < 1:
+            self.wheel_vel = 0
             idx = 0
             min_dist = 12232
             for i in range(4):
@@ -554,6 +566,9 @@ class App:
             self.fade_dir = -1
             self.text_idx = 0
         self.tile_map.load(series[self.level][0])
+        self.leaf_spawners = []
+        for tree in self.tile_map.extract([("tree", 0), ("tree", 1)], keep=True):
+            self.leaf_spawners.append((pygame.Rect(tree['pos'][0] + 5, tree['pos'][1] + 5, 21, 13), True))
 
         # extract enemies
         self.enemies = []
@@ -852,6 +867,7 @@ class App:
     def update(self):
         # update entities
         self.player.update(self.dt)
+        self.tile_map.grass_manager.update([self.player.get_rect()])
 
         complete = True
         for enemy in self.enemies:
@@ -878,7 +894,11 @@ class App:
                 pos = [cloud[0] % (self.level_surf.get_width() + 128) - 64, cloud[1] % (self.level_surf.get_height() * 0.5 + 64) - 32]
                 self.level_surf.blit(self.assets["clouds"][cloud[2]], pos)
         elif self.level in {1, 4}:
-            self.level_surf.blit(pygame.transform.scale(self.assets["restaurant_bg"], self.level_surf.get_size()), (0, 0))
+            if self.series == 0:
+                self.level_surf.blit(pygame.transform.scale(self.assets["restaurant_bg"], self.level_surf.get_size()), (0, 0))
+            else:
+                self.level_surf.blit(pygame.transform.scale(self.assets["restaurant_bg2"], self.level_surf.get_size()), (0, 0))
+
         elif self.level in {2, 5}:
             self.level_surf.blit(pygame.transform.scale(self.assets["kitchen_bg"], self.level_surf.get_size()), (0, 0))
 
@@ -891,9 +911,27 @@ class App:
         self.screen_shake = max(0, self.screen_shake - SCREEN_SHAKE_DECAY * self.dt)
 
         self.tile_map.draw(self.level_surf, render_scroll)
+        self.tile_map.draw_decor(self.level_surf, render_scroll)
         for enemy in self.enemies:
             enemy.draw(self.level_surf, render_scroll)
         self.player.draw(self.level_surf, render_scroll)
+
+        average_gust = 0
+        for gust in self.wind:
+            gust[0] -= (gust[1] + math.sin(gust[0] * 0.025) * 0.3) * self.dt * 0.5
+            if not ((gust[0], self.scroll[1] + self.screen.get_height() / 2) in self):
+                gust[1] = 5 * (random.random() + 0.5) * 2
+                gust[0] = self.scroll[0] + self.screen.get_width() - gust[1] * self.dt
+            average_gust += gust[1]
+        average_gust *= 0.5
+
+        for rect, fix in self.leaf_spawners:
+            if random.random() * 20000 / (average_gust * 0.15) / self.dt < rect.width * rect.height:
+                pos = (rect.x + random.random() * rect.width, rect.y + random.random() * rect.height)
+                if not self.tile_map.solid_check(pos) and fix:
+                    self.particles.append(Particle(self, 'leaf', pos, (-0.1, 0.3), frame=random.randint(0, 16), solid=True))
+                else:
+                    self.particles.append(Particle(self, 'leaf', pos, (-0.1, 0.3), frame=random.randint(0, 16), solid=False))
 
         for particle in self.particles.copy():
             kill = particle.update()
@@ -1121,7 +1159,7 @@ class App:
             self.tileTex.use(2)
             self.uiTex.use(3)
             self.noiseTex.use(4)
-            self.prog["time"] = -self.time * 0.25
+            self.prog["time"] = -self.time * 0.5
             self.vao.render(moderngl.TRIANGLE_STRIP) # render screen quad
 
             pygame.display.flip()

@@ -7,7 +7,7 @@ from copy import deepcopy
 GRASS_DENSITY = 8
 GRASS_DAMPENING = 0.9
 GRASS_ACCURACY = 2
-GRASS_TENSION = 7
+GRASS_TENSION = 30
 NEIGHBOUR_OFFSETS = [(-1, 0), (-1, -1), (0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (0, 0)]
 TILE_SIZE = 16
 

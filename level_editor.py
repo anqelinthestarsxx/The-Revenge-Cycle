@@ -5,10 +5,10 @@ from src.bip import *
 # window dimensions
 SCR_WIDTH = 2100
 SCR_HEIGHT = 1200
-SCALE = 2 # screen scaling
+SCALE = 5 # screen scaling
 
 # json map path
-MAP = "data/maps/2.json"
+MAP = "data/maps/0.json"
 
 # tile sets that can be autotiled
 AUTO_TILE_TYPES = {"grass", "kitchen", "wood"}
@@ -51,6 +51,11 @@ class Editor:
             "grass": self.load_tileset(pygame.image.load("data/images/tiles/grass.png").convert()),
             "wood": self.load_tileset(pygame.image.load("data/images/tiles/wood.png").convert()),
             "kitchen": self.load_tileset(pygame.image.load("data/images/tiles/kitchen.png").convert()),
+            "kitchen_decor": [load_image("appliances/dishwasher.png"), load_image("appliances/fridgey.png"), load_image("appliances/little-oven.png"), load_image("appliances/mini-fryer.png")],
+            "table": [load_image("tiles/table.png")],
+            "table2": self.load_sheet(pygame.image.load("data/images/tiles/table2.png").convert(), [32, 32]),
+            "tree":  self.load_sheet(pygame.image.load("data/images/tiles/tree.png").convert(), [32, 32]),
+            "grass_key": [load_image("tiles/grass_key.png")],
             "enemy": [load_image("tiles/enemy.png")]
         }
         # {"start": [x, y], "end": [x, y]}
@@ -327,6 +332,9 @@ class Editor:
         self.draw_tiles()
         for node in self.path_nodes:
             pygame.draw.circle(self.screen, (255, 255, 255), (node[0] * TILE_SIZE - self.scroll[0] + TILE_SIZE * 0.5, node[1] * TILE_SIZE - self.scroll[1] + TILE_SIZE * 0.5), TILE_SIZE * 0.5)
+        for tile in self.off_grid: # tile: [pos, type, variant] absolute pos
+            self.screen.blit(self.assets[tile['type']][tile['variant']], (tile['pos'][0] - self.scroll.x, tile['pos'][1] - self.scroll.y))
+
         pygame.draw.rect(self.screen, (0, 255, 0), (self.player_pos[0] - self.scroll[0], self.player_pos[1] - self.scroll[1], TILE_SIZE, TILE_SIZE))
         mouse_pos = pygame.mouse.get_pos()
         if self.grid:
