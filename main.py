@@ -35,6 +35,9 @@ class App:
         self.ui_surf = self.level_surf.copy()
         self.ui_render_surf = self.screen.copy()
 
+        pygame.mixer.music.load(get_script_path() + "data/audio/folia.wav")
+        pygame.mixer.music.play(-1)
+
         self.fade = 0
         self.fade_dir = 0
 
