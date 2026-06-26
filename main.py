@@ -160,14 +160,15 @@ class App:
         self.series = 0
         self.level = 0
 
-        self.state = "spin"
+        self.state = "menu"
 
-        self.text = [
+        self.text = [[
             "Food is a very serious business...", 
             "The young chef Elsa Turner has a promising career ahead of her, were it not for the raucious visitors attending the grimy tavern - 'The Vista' near her restaurant, the Sérénité.",
             "Elsa has politely requested the owner, Bart Freeman, many times to cut down the noise around his tavern, as the ordinary folk repulse the wealthy patrons of her fine dining establishment.",
-            "However, that cantankerous old fool has stubbornly refused to hear Elsa's pleas, laughing in her face! The impertinence! Drastic times call for drastic measures, so Elsa has taken matters into her own hands..."
-        ]
+            "However, that cantankerous old fool has stubbornly refused to hear Elsa's pleas, laughing in her face! The impertinence!","Drastic times call for drastic measures, so Elsa has decided to take matters into her own hands..."
+        ]]
+        self.texts_idx = 0
         self.text_idx = 0
         self.text_timer = 0
 
@@ -198,6 +199,7 @@ class App:
         self.shotgun_item.blit(rot_surf, (1, 1))
         self.shotgun_item.set_colorkey((0, 0, 0))
 
+        self.weapon = "shotgun"
     
     def menu(self):
         level_size = (self.level_surf.get_width() * self.ls_scale, self.level_surf.get_height() * self.ls_scale)
@@ -245,6 +247,9 @@ class App:
         self.ui_render_surf.fill((0, 0, 0))
         self.ui_surf.fill((0, 0, 0))
 
+        pygame.draw.rect(self.ui_surf, (20, 16, 32), (TILE_SIZE, TILE_SIZE, self.ui_surf.get_width() - TILE_SIZE * 2, self.ui_surf.get_height() - TILE_SIZE * 2))
+        pygame.draw.rect(self.ui_surf, (219, 224, 231), (TILE_SIZE, TILE_SIZE, self.ui_surf.get_width() - TILE_SIZE * 2, self.ui_surf.get_height() - TILE_SIZE * 2), width=1)
+
         self.fade = pygame.math.clamp(self.fade + self.fade_dir * self.dt * 0.014, 0, 1)
         if self.fade_dir == 1 and self.fade == 1:
             self.state = "spin"
@@ -252,8 +257,6 @@ class App:
         
         if self.fade == 0 and self.fade_dir == -1:
             self.fade_dir = 0
-        
-        
 
         padding = 4
 
@@ -262,32 +265,80 @@ class App:
             self.ui_surf.blit(font_surf, (TILE_SIZE + padding + 1, self.ui_surf.get_height() - font_surf.get_height() - padding - 1 - TILE_SIZE))
         
         self.text_timer += self.dt
+        offset = 0
+        delay = 30
+        for m in range(self.text_idx + 1):
+            full_text = self.text[self.texts_idx][m]
+            render_text = [""]
+            idx = 0 
+            type_speed = 0.8
+            tempt = self.text_timer
+            if m != self.text_idx:
+                self.text_timer = len(full_text) / type_speed + delay
+            
+            for i in range(min(int(max(0, self.text_timer - delay) * type_speed), len(full_text))):
+                if full_text[i] == " ":
+                    temp = render_text[idx]
+                    break_text = False
+                    for j in range(len(full_text) - i - 1):
+                        if full_text[i + j + 1] == " ":
+                            break_text = False
+                            break
+                        else:
+                            temp += full_text[i + j]
+                        if self.font.size(temp)[0] >= self.ui_surf.get_width() - 2 * TILE_SIZE - 2 - padding * 3:
+                            break_text = True
+                            break
+                    if break_text:
+                        render_text.append("")
+                        idx += 1
+                render_text[idx] += full_text[i]
+            
+            for k, line in enumerate(render_text):
+                text_surf = self.font.render(line, False, (219, 224, 231))
+                self.ui_surf.blit(text_surf, (TILE_SIZE + padding + 1, TILE_SIZE + padding + 1 + 12 * k + offset))
+                offset
+            self.text_timer = tempt
 
-        full_text = self.text[self.text_idx]
-        render_text = [""]
-        idx = 0
-        type_speed = 0.8
-        for i in range(min(int(max(0, self.text_timer - 100) * type_speed), len(full_text))):
-            if full_text[i] == " ":
-                temp = render_text[idx]
-                break_text = False
-                for j in range(len(full_text) - i - 1):
-                    if full_text[i + j + 1] == " ":
-                        break_text = False
-                        break
-                    else:
-                        temp += full_text[i + j]
-                    if self.font.size(temp)[0] >= self.ui_surf.get_width() - 2 * TILE_SIZE - 2 - padding * 3:
-                        break_text = True
-                        break
-                if break_text:
-                    render_text.append("")
-                    idx += 1
-            render_text[idx] += full_text[i]
+            if m == self.text_idx:
+                if (self.text_timer - delay) * type_speed > len(full_text):
+                    pygame.draw.rect(self.ui_surf, (219, 224, 231), (1 + padding + TILE_SIZE + text_surf.get_width() + 2, TILE_SIZE + padding + 1 + 12 * idx + offset, 5, 8))
+                else:
+                    if time.time() * 0.2 % type_speed * 2 < type_speed:
+                        pygame.draw.rect(self.ui_surf, (219, 224, 231), (1 + padding + TILE_SIZE + text_surf.get_width() + 2, TILE_SIZE + padding + 1 + 12 * idx + offset, 5, 8))
+
+            offset += 16 * len(render_text)
         
-        for i, line in enumerate(render_text):
-            text_surf = self.font.render(line, False, (219, 224, 231))
-            self.ui_surf.blit(text_surf, (TILE_SIZE + padding + 1, TILE_SIZE + padding + 1 + 12 * i))
+        # self.text_timer += self.dt
+        # temp = self.text_timer
+        # for i in range(self.text_idx):
+        #     full_text = self.text[i][self.text_idx]
+        #     render_text = [""]
+        #     idx = 0
+        #     type_speed = 0.8
+        #     if i != self.text_idx:
+
+        #     for i in range(min(int(max(0, self.text_timer - 100) * type_speed), len(full_text))):
+        #         if full_text[i] == " ":
+        #             temp = render_text[idx]
+        #             break_text = False
+        #             for j in range(len(full_text) - i - 1):
+        #                 if full_text[i + j + 1] == " ":
+        #                     break_text = False
+        #                     break
+        #                 else:
+        #                     temp += full_text[i + j]
+        #                 if self.font.size(temp)[0] >= self.ui_surf.get_width() - 2 * TILE_SIZE - 2 - padding * 3:
+        #                     break_text = True
+        #                     break
+        #             if break_text:
+        #                 render_text.append("")
+        #                 idx += 1
+        #         render_text[idx] += full_text[i]
+            
+        #     for i, line in enumerate(render_text):
+        #         text_surf = self.font.render(line, False, (219, 224, 231))
+        #         self.ui_surf.blit(text_surf, (TILE_SIZE + padding + 1, TILE_SIZE + padding + 1 + 12 * i))
         
         pygame.draw.rect(self.ui_surf, (20, 16, 32), (0, 0, self.ui_surf.get_width(), self.ui_surf.get_height() * 1.6 * self.fade))
 
@@ -405,13 +456,21 @@ class App:
                     min_dist = dist
                     idx = i
                 
+            text = ["Chilli Bomb", "Bare Hands", "Shotgun", "Boning Knife"][idx]
             if self.wheel_text == "":
-                self.wheel_text = [random.choice(["blow stuff up!", "paint it red!"]), random.choice(["kick some ass!", "mess up those scurvy dogs!"]), random.choice(["hunt down some civilians!", "shoot upstanding citizens!"]), random.choice(["gut them like a fish!", "spill their intestines!"])][idx]
-            font_surf = self.bold_font.render(f"Press [ENTER] to {self.wheel_text}", False, colors[idx])
+                self.wheel_text = [random.choice(["blow stuff up!", "paint it red!"]), random.choice(["kick some ass!", "mess up those scurvy dogs!"]), random.choice(["hunt down some civilians!", "shoot some upstanding citizens!"]), random.choice(["gut them like a fish!", "spill their intestines!"])][idx]
+
+                self.player.mode = ["pepper", "fists", "shotgun", "sword"][idx]
+                self.weapon = self.player.mode
             # mask = font_surf.
+            font_surf = self.bold_font.render(f"Press [ENTER] to go {self.wheel_text}", False, (20, 16, 32))
             self.ui_surf.blit(font_surf, (self.ui_surf.get_width() * 0.5 - font_surf.get_width() * 0.5, self.ui_surf.get_height() - 16))
-            
-        
+            font_surf = self.bold_font.render(f"Press [ENTER] to go {self.wheel_text}", False, colors[idx])
+            self.ui_surf.blit(font_surf, (self.ui_surf.get_width() * 0.5 - font_surf.get_width() * 0.5, self.ui_surf.get_height() - 16 - 1))
+            font_surf = self.bold_font.render(text, False, (20, 16, 32))
+            self.ui_surf.blit(font_surf, (center[0] + radius * 1.25, center[1] - font_surf.get_height() * 0.5))
+            font_surf = self.bold_font.render(text, False, (219, 224, 231))
+            self.ui_surf.blit(font_surf, (center[0] + radius * 1.25, center[1] - font_surf.get_height() * 0.5 - 1))
 
         self.ui_surf.fblits([self.calc_smoke(smoke, [0, 0]) for smoke in self.smoke.copy()])
 
@@ -450,6 +509,7 @@ class App:
         self.screen_shake = 0
 
         self.player = Player(self, [9, 31], self.tile_map.player_pos, "black" if self.series < 1 else "white")
+        self.player.mode = self.weapon
 
         self.particles = []
         self.wind = ([0, 10], [0, 15], [0, 5])
@@ -919,13 +979,13 @@ class App:
                             self.fade_dir = 1
                     elif self.state == "talk":
                         if event.key == pygame.K_RETURN:
-                            full_text = self.text[self.text_idx]
+                            full_text = self.text[self.texts_idx][self.text_idx]
                             if self.text_timer > 10:
-                                if (self.text_timer - 100) * 0.8 < len(full_text):
-                                    self.text_timer = len(full_text) / 0.8 + 100
+                                if (self.text_timer - 30) * 0.8 < len(full_text):
+                                    self.text_timer = len(full_text) / 0.8 + 30
                                 else:
                                     self.text_idx += 1
-                                    if self.text_idx == len(self.text):
+                                    if self.text_idx == len(self.text[self.texts_idx]):
                                         self.text_idx -= 1
                                         self.fade_dir = 1
                                     self.text_timer = 0
