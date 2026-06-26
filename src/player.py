@@ -77,6 +77,7 @@ class Pepper:
                     enemy.die(pygame.Vector2(vel), pos)
         else:
             if circle.colliderect(self.app.player.get_rect()) and not self.app.player.dead:
+                self.app.player.death_message = random.choice(["was reduced to a sizzling spicy corpse.", "was shown some chilli power!", "felt a sharp burst, then everything went red..."])
                 self.app.player.die(pygame.Vector2(vel), pos)
     
     def shoot(self, pos, speed=9):
@@ -222,6 +223,7 @@ class Shotgun:
                     if self.app.player.get_rect().collidepoint(bullet[0][0], bullet[0][1]) and not self.app.player.dead:
                         kill = True
                         force = 1
+                        self.app.player.death_message = random.choice(["was shot like a dog.", "got their belly pumped full of lead.", "ate buckshot."])
                         self.app.player.die(pygame.Vector2(math.cos(bullet[1]) * speed * force, math.sin(bullet[1]) * speed * force), pygame.Vector2(bullet[0]))
 
             bullet[2] += self.app.dt
@@ -433,12 +435,15 @@ class Player:
         self.verlet_timer = 0
 
         self.finished = False
+
+        self.death_message = ""
     
     def die(self, impact: pygame.Vector2, impact_point: pygame.Vector2):
         if not self.dead:
             impact = pygame.Vector2(impact)
             impact_point = pygame.Vector2(impact_point)
-            # self.dead = True
+            self.dead = True
+            self.app.fade_dir = 1
 
             self.app.slomo = 0.1
 

@@ -116,6 +116,7 @@ class App:
             "kitchen_bg": load_image("backgrounds/kitchen-bg.png"),
             "restaurant_bg": load_image("woodgrain.png"),
             "restaurant_bg2": load_image("backgrounds/restaurant-bg-no-plants.png"),
+            "rewind": load_image("rewind.png")
         }
 
         self.noiseTex = self.ctx.texture(self.assets["noise"].get_size(), 4)
@@ -127,6 +128,7 @@ class App:
 
         self.bold_font = load_font("dogicapixelbold.ttf", size=8)
         self.font = load_font("dogicapixel.ttf", size=8)
+        self.difficulty = -0.5
 
         self.tile_map = TileMap(self)
         self.tile_map.load("data/maps/0.json")
@@ -173,7 +175,7 @@ class App:
         self.series = 0
         self.level = 0
 
-        self.state = "game"
+        self.state = "menu"
 
         self.text = [[
             "Food is a very serious business...", 
@@ -237,6 +239,90 @@ class App:
         self.shotgun_item.set_colorkey((0, 0, 0))
 
         self.weapon = "shotgun"
+
+        self.strikes = 3
+        self.rs_hover = False
+
+        self.cycles = 0
+        self.max_cycles = 0
+
+    
+    def death(self):
+        level_size = (self.level_surf.get_width() * self.ls_scale, self.level_surf.get_height() * self.ls_scale)
+        self.level_surf_pos = pygame.Vector2(
+            self.screen.get_width() * 0.5 - level_size[0] * 0.5,
+            self.screen.get_height() * 0.5 - level_size[1] * 0.5,
+        )
+        self.ui_render_surf.fill((0, 0, 0))
+        self.ui_surf.fill((0, 0, 0))
+
+        font_surf = self.bold_font.render(f"{"Elsa" if self.player.color == "black" else "Bart"} {self.player.death_message}", False, (53, 20, 40))
+        self.ui_surf.blit(font_surf, (self.ui_surf.get_width() * 0.5 - font_surf.get_width() * 0.5, self.ui_surf.get_height() * 0.4 * 50))
+        font_surf = self.bold_font.render(f"{"Elsa" if self.player.color == "black" else "Bart"} {self.player.death_message}", False, (219, 224, 231))
+        self.ui_surf.blit(font_surf, (self.ui_surf.get_width() * 0.5 - font_surf.get_width() * 0.5, self.ui_surf.get_height() * 0.4 - 1))
+
+        font_surf = self.bold_font.render(f"High Score: {self.max_cycles} Cycles", False, (219, 224, 231))
+        self.ui_surf.blit(font_surf, (self.ui_surf.get_width() * 0.5 - font_surf.get_width() * 0.5, 8))
+        font_surf = self.font.render(f"Survived: {self.max_cycles} Cycles", False, (219, 224, 231))
+        self.ui_surf.blit(font_surf, (self.ui_surf.get_width() * 0.5 - font_surf.get_width() * 0.5, 8 + TILE_SIZE))
+
+        mouse_pos = pygame.Vector2(pygame.mouse.get_pos())
+        mouse_pos /= SCALE
+        mouse_pos -= self.level_surf_pos
+        mouse_pos /= self.ls_scale
+        rs = pygame.transform.scale2x(self.assets["rewind"])
+        self.rs_hover = pygame.Rect(self.ui_surf.get_width() * 0.5 - rs.get_width() * 0.5, self.ui_surf.get_height() * 0.6 - rs.get_height() * 0.5, rs.get_width(), rs.get_height()).collidepoint(mouse_pos)
+        if self.rs_hover:
+            rs.set_alpha(200)
+        self.ui_surf.blit(rs, (self.ui_surf.get_width() * 0.5 - rs.get_width() * 0.5, self.ui_surf.get_height() * 0.6 - rs.get_height() * 0.5 - int(self.rs_hover)))
+
+        font_surf = self.bold_font.render(f"Rewinds left: {max(self.strikes, 0)}", False, (219, 224, 231))
+        self.ui_surf.blit(font_surf, (self.ui_surf.get_width() * 0.5 - font_surf.get_width() * 0.5, self.ui_surf.get_height() * 0.5 - 1))
+
+        # if self.time * 0.02 % 2 < 1.54:
+        if self.strikes < 1:
+            font_surf = self.bold_font.render("Press [ENTER] to play again!", False, (219, 224, 231))
+            self.ui_surf.blit(font_surf, (self.ui_surf.get_width() * 0.5 - font_surf.get_width() * 0.5, self.ui_surf.get_height() - TILE_SIZE))
+        else:
+            font_surf = self.bold_font.render("Press [ENTER] to rewind!", False, (219, 224, 231))
+            self.ui_surf.blit(font_surf, (self.ui_surf.get_width() * 0.5 - font_surf.get_width() * 0.5, self.ui_surf.get_height() - TILE_SIZE))
+    
+        self.fade = pygame.math.clamp(self.fade + self.fade_dir * self.dt * 0.03, 0, 1)
+        if self.fade_dir == 1 and self.fade == 1:
+            if self.strikes >= 0:
+                temp_strikes = self.strikes
+                self.level -= 1
+                self.next_level()
+                self.strikes = temp_strikes
+                self.state = "game"
+                self.fade_dir = -1
+            else:
+                self.fade_dir = -1
+                self.level = -1
+                self.series = 0
+                self.next_level()
+                self.difficulty = -0.5
+                self.state = "menu"
+                self.text_idx = 0
+                self.texts_idx = 0
+            self.cycles = 0
+        
+        if self.fade == 0 and self.fade_dir == -1:
+            self.fade_dir = 0
+
+        pygame.draw.rect(self.ui_surf, (20, 16, 32), (0, 0, self.ui_surf.get_width(), self.ui_surf.get_height() * 1.6 * self.fade))
+
+        self.ui_render_surf.blit(pygame.transform.scale(self.ui_surf, level_size), self.level_surf_pos)
+        self.uiTex.write(self.ui_render_surf.get_view('1'))
+        self.prog["scrollX"].value = 0
+        self.prog["scrollY"].value = 0
+        self.prog["scrWidth"].value = self.screen.get_width()
+        self.prog["scrHeight"].value = self.screen.get_height()
+        self.prog["levelX"].value = self.level_surf_pos.x
+        self.prog["levelY"].value = self.level_surf_pos.y
+        self.prog["levelW"].value = level_size[0]
+        self.prog["levelH"].value = level_size[1]
+        self.prog["levelScale"].value = self.ls_scale
     
     def menu(self):
         level_size = (self.level_surf.get_width() * self.ls_scale, self.level_surf.get_height() * self.ls_scale)
@@ -553,14 +639,17 @@ class App:
         self.prog["levelScale"].value = self.ls_scale
     
     def next_level(self):
+        self.strikes = 3
         orig_series = self.series
         self.level += 1
         series = SERIES_1 if self.series == 0 else SERIES_2
         if self.level > 2:
             self.series = (self.series + 1) % 2
             self.level = 0
+            self.difficulty += 0.25
         series = SERIES_1 if self.series == 0 else SERIES_2
         if self.series != orig_series:
+            self.cycles += 1
             self.state = "talk"
             self.texts_idx += 1
             self.fade_dir = -1
@@ -706,7 +795,7 @@ class App:
                 big_rect = pygame.Rect(self.player.pos.x - TILE_SIZE, self.player.pos.y - TILE_SIZE, TILE_SIZE, TILE_SIZE)
                 if big_rect.collidepoint(splat[0]):
                     if self.player.particle_check(splat[0])[0]:
-                        angle = random.random() * mathpi * 2
+                        angle = random.random() * math.pi * 2
                         vel = 0.2
                         self.slime.append([list(splat[0]), [math.cos(angle) * vel, math.sin(angle) * vel], splat[2]])
                         splat[3] = -1
@@ -1005,7 +1094,12 @@ class App:
     
         self.fade = pygame.math.clamp(self.fade + self.fade_dir * self.dt * 0.014, 0, 1)
         if self.fade_dir == 1 and self.fade == 1:
-            self.next_level()
+            if not self.player.dead:
+                self.next_level()
+            else:
+                self.state = "death"
+                if self.cycles > self.max_cycles:
+                    self.max_cycles = self.cycles
             self.fade_dir = -1
 
         if self.fade == 0 and self.fade_dir == -1:
@@ -1101,6 +1195,10 @@ class App:
                                 self.wheel_text = ""
                             elif self.wheel_vel < 0.001:
                                 self.fade_dir = 1
+                    elif self.state == "death":
+                        if event.key == pygame.K_RETURN:
+                            self.fade_dir = 1
+                            self.strikes -= 1
                 elif event.type == pygame.KEYUP:
                     if self.state == "game":
                         if event.key in {pygame.K_UP, pygame.K_SPACE, pygame.K_w}:
@@ -1128,6 +1226,11 @@ class App:
                         elif self.player.mode == "fists" and not self.player.attacking:
                             self.player.punch.reset()
                             self.player.attacking = True
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    if self.state == "death":
+                        if self.rs_hover:
+                            self.fade_dir = 1
+                            self.strikes -= 1
                 elif event.type in {pygame.WINDOWEXPOSED, pygame.WINDOWMOVED, pygame.WINDOWRESIZED}:
                     self.last_time = time.time()
             
@@ -1146,6 +1249,8 @@ class App:
                 self.talk()
             elif self.state == "spin":
                 self.wheel_spin()
+            elif self.state == "death":
+                self.death()
             
             self.prog["menu"] = int(self.state != "game")
             self.screenTex.write(self.screen.get_view('1')) # update opengl texture using pygame surface data

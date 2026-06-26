@@ -59,7 +59,7 @@ class Enemy:
         self.scribble_surf.blit(self.mask_surf, (0, 0))
         self.scribble_surf.set_colorkey((0, 255, 0))
 
-        self.pause_time = random.random() * 10
+        self.pause_time = random.random() * 10 + 50 * self.app.difficulty
         self.verlet_timer = 0
 
     
@@ -161,10 +161,10 @@ class Enemy:
             for enemy in self.app.enemies:
                 if enemy.num != self.num:
                     if self.pos.distance_squared_to(enemy.pos) < (TILE_SIZE * 10) ** 2 and enemy.mood != "angry":
-                        if enemy.mood == "panic":
+                        if enemy.mood == "panic" and random.random() - self.app.difficulty < 1.0:
                             enemy.mood = "angry"
                         else:
-                            if random.random() < 0.6:
+                            if random.random() < 0.6 - self.app.difficulty:
                                 enemy.mood = "panic"
                             else:
                                 enemy.mood = "angry"
@@ -303,6 +303,7 @@ class Enemy:
                 
             if self.mood == "angry" and self.sword.attacking and self.mode == "sword" and not self.app.player.attacking and not self.app.player.sword.attacking:
                 if self.app.player.collide_mask(self.sword.attack_mask, self.sword.attack_offset):
+                    self.app.player.death_message = random.choice(["was rigged on a steak knife.", "was unseamed from the nave to the chaps.", "was filleted like a fish."])
                     self.app.player.die(pygame.Vector2(2, 2), (pygame.Vector2(self.app.player.get_rect().center) + pygame.Vector2(self.get_rect().center)) * 0.5)
             
             if self.app.player.sword.attacking and self.app.player.mode == "sword":
@@ -374,7 +375,7 @@ class Enemy:
         self.pause_time += self.app.dt
         pause = False
         if self.pause_time > 150:
-            self.pause_time = random.random() * 60
+            self.pause_time = random.random() * 60 + 60 * self.app.difficulty
             pause = True
         
         if pause:
