@@ -167,6 +167,30 @@ class App:
             "The young chef Elsa Turner has a promising career ahead of her, were it not for the raucious visitors attending the grimy tavern - 'The Vista' near her restaurant, the Sérénité.",
             "Elsa has politely requested the owner, Bart Freeman, many times to cut down the noise around his tavern, as the ordinary folk repulse the wealthy patrons of her fine dining establishment.",
             "However, that cantankerous old fool has stubbornly refused to hear Elsa's pleas, laughing in her face! The impertinence!","Drastic times call for drastic measures, so Elsa has decided to take matters into her own hands..."
+        ], [
+            "Bart is not very happy...",
+            "Elsa brutally slaughtered his guests and hard-working staff last night - this is personal now!",
+            "Consumed by a primal rage, Bart is going to pay the Sérénité a quick well-meaned visit..."
+        ], [
+            "Elsa is ruined...",
+            "All of her loyal customers and talented workers have been cruelly murdered by that savage - BART!",
+            "Yet she will not be deterred! It seems that imbecile has not learned his lesson yet...",
+            "Bart had better watch out; Elsa will not abandon her new-born vendetta and will not stop until one of them is six feet undergound!"
+        ], [
+            "Oh how the tables have turned! The rough wood of Bart's bar and furniture has now been soiled with the blood and internals of those who sat there!",
+            "However, Bart is still out there - and Elsa must pay for her crimes.",
+            "In her hubris, the Sérénité may once again end up becoming soaked with the sticky, stale blood of her clients clinging to the floor and walls..."
+        ], [
+            "This is war..."
+        ], [
+            "This is madness..."
+        ], [
+            "This is SPARTA!!! BWAHAHAHAHA!"
+        ], [
+            "That evil murdering hag is insane. Bart must end this quick!"
+        ], [
+            "That little kretin has escaped again!",
+            "In the meantime, best slay some more upstanding citizens..."
         ]]
         self.texts_idx = 0
         self.text_idx = 0
@@ -490,6 +514,7 @@ class App:
         self.prog["levelScale"].value = self.ls_scale
     
     def next_level(self):
+        orig_series = self.series
         self.level += 1
         if self.level > 2:
             self.series = (self.series + 1) % 2
@@ -533,6 +558,11 @@ class App:
         self.slomo = 1.0
 
         self.level_complete = False
+
+        if self.series != orig_series:
+            self.state = "talk"
+            self.texts_idx += 1
+            self.fade_dir = -1
    
     def update_fireflies(self, scroll):
         for fly in self.fireflies:
@@ -903,8 +933,7 @@ class App:
         self.fade = pygame.math.clamp(self.fade + self.fade_dir * self.dt * 0.014, 0, 1)
         if self.fade_dir == 1 and self.fade == 1:
             self.next_level()
-            self.fade_dir = -1
-        
+
         if self.fade == 0 and self.fade_dir == -1:
             self.fade_dir = 0
 
