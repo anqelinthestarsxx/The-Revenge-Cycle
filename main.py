@@ -35,8 +35,6 @@ class App:
         self.ui_surf = self.level_surf.copy()
         self.ui_render_surf = self.screen.copy()
 
-        pygame.mixer.music.load(get_script_path() + "data/audio/folia.wav")
-        pygame.mixer.music.play(-1)
 
         self.fade = 0
         self.fade_dir = 0
@@ -119,9 +117,45 @@ class App:
             "kitchen_bg": load_image("backgrounds/kitchen-bg.png"),
             "restaurant_bg": load_image("woodgrain.png"),
             "restaurant_bg2": load_image("backgrounds/restaurant-bg-no-plants.png"),
-            "rewind": load_image("rewind.png")
+            "rewind": load_image("rewind.png"),
+            "sfx": {
+                "button": load_sound("button.ogg"),
+                "knife_death": load_sound("death_0.ogg"),
+                "explosion0": load_sound("explosion.ogg"),
+                "explosion1": load_sound("explosion_3.ogg"),
+                "fire": load_sound("fire.ogg"),
+                "bullet_hit": load_sound("hit.ogg"),
+                "punch_hit": load_sound("hit_3.ogg"),
+                "cinematic_boom": load_sound("intro.ogg"),
+                "thunder": load_sound("thunder.ogg"),
+                "shoot": load_sound("shoot.ogg"),
+                "raining": load_sound("raining.ogg"),
+                "dial_tick": load_sound("switch8.ogg"),
+                "dial_finish": load_sound("switch31.ogg"),
+                "swoosh": load_sound("swoosh.ogg"),
+                "vanish": load_sound("vanish.ogg"),
+                "sword_slash": load_sound("slash.ogg"),
+                "transition": load_sound("transition.ogg"),
+                "enter": load_sound("click3.ogg")
+            }
         }
+        pygame.mixer.music.load(get_script_path() + "data/audio/folia.ogg")
+        
         self.load_guests()
+
+        self.played_intro = False
+        self.music_start = False
+        self.tick_timer = 0
+        self.last_played = 0
+        self.talk_timer = 0
+        self.rained = False
+        self.thundered = False
+        self.rain_channel = pygame.mixer.Channel(0)
+        self.music_pos = 0
+
+        self.target_music_volume = 0.4
+        self.music_volume = 0.4
+
 
         self.noiseTex = self.ctx.texture(self.assets["noise"].get_size(), 4)
         self.noiseTex.filter = (moderngl.LINEAR, moderngl.LINEAR)
@@ -213,7 +247,7 @@ class App:
         ]]
         self.texts_idx = 0
         self.text_idx = 0
-        self.text_timer = 0
+        self.text_timer = -100
 
         self.wheel_angle = math.radians(math.floor(random.random() * 1000 / 90) * 90)
         self.wheel_vel = 0
@@ -324,6 +358,7 @@ class App:
                 self.text_idx = 0
                 self.texts_idx = 0
                 self.cycles = 0
+            self.assets["sfx"]["transition"].play()
         
         if self.fade == 0 and self.fade_dir == -1:
             self.fade_dir = 0
@@ -343,6 +378,13 @@ class App:
         self.prog["levelScale"].value = self.ls_scale
     
     def menu(self):
+        if not self.played_intro and self.time > 30:
+            self.assets["sfx"]["cinematic_boom"].play()
+            self.played_intro = True
+        if not self.music_start and self.time > 60:
+            pygame.mixer.music.set_volume(0.4)
+            pygame.mixer.music.play(-1)
+            self.music_start = True
         level_size = (self.level_surf.get_width() * self.ls_scale, self.level_surf.get_height() * self.ls_scale)
         self.level_surf_pos = pygame.Vector2(
             self.screen.get_width() * 0.5 - level_size[0] * 0.5,
@@ -360,6 +402,7 @@ class App:
         self.fade = pygame.math.clamp(self.fade + self.fade_dir * self.dt * 0.014, 0, 1)
         if self.fade_dir == 1 and self.fade == 1:
             self.state = "talk"
+            self.assets["sfx"]["transition"].play()
             self.fade_dir = -1
         
         if self.fade == 0 and self.fade_dir == -1:
@@ -380,6 +423,14 @@ class App:
         self.prog["levelScale"].value = self.ls_scale
 
     def talk(self):
+        self.talk_timer += self.dt
+        if self.talk_timer > 60 and not self.thundered:
+            self.assets["sfx"]["thunder"].play()
+            self.thundered = True
+        if not self.rained:
+            self.rain_channel.play(self.assets["sfx"]["raining"], loops=-1, fade_ms=1000)
+            self.rained = True
+            self.target_music_volume = 0.0
         level_size = (self.level_surf.get_width() * self.ls_scale, self.level_surf.get_height() * self.ls_scale)
         self.level_surf_pos = pygame.Vector2(
             self.screen.get_width() * 0.5 - level_size[0] * 0.5,
@@ -399,8 +450,14 @@ class App:
             self.wheel_scale = 1
             self.wheel_scale_vel = 0
             self.spin_alpha = 1
+            self.assets["sfx"]["transition"].play()
             self.wheel_text = ""
             self.fade_dir = -1
+            self.talk_timer = 0
+            self.rained = False
+            self.thundered = False
+            self.rain_channel.fadeout(2000)
+            self.target_music_volume = 0.4
         
         if self.fade == 0 and self.fade_dir == -1:
             self.fade_dir = 0
@@ -542,10 +599,17 @@ class App:
         if self.fade_dir == 1 and self.fade == 1:
             self.state = "game"
             self.fade_dir = -1
+            self.assets["sfx"]["transition"].play()
         
         if self.fade == 0 and self.fade_dir == -1:
             self.fade_dir = 0
 
+        self.last_played += self.dt
+        self.tick_timer += self.wheel_vel * self.dt
+        if self.tick_timer > math.pi * 0.5 * 0.5 and self.last_played > 5:
+            self.tick_timer = 0
+            self.last_played = 0
+            self.assets["sfx"]["dial_tick"].play()
         self.wheel_angle += self.wheel_vel * self.dt
         self.wheel_vel *= 0.98 ** self.dt
         segments = 10
@@ -625,6 +689,7 @@ class App:
                 
             text = ["Chilli Bomb", "Bare Hands", "Shotgun", "Boning Knife"][idx]
             if self.wheel_text == "":
+                self.assets["sfx"]["dial_finish"].play()
                 self.wheel_text = [random.choice(["blow stuff up!", "paint it red!"]), random.choice(["kick some ass!", "mess up those scurvy dogs!"]), random.choice(["hunt down some civilians!", "shoot some upstanding citizens!"]), random.choice(["gut them like a fish!", "spill their intestines!"])][idx]
 
                 self.player.mode = ["pepper", "fists", "shotgun", "sword"][idx]
@@ -1190,33 +1255,39 @@ class App:
                         elif event.key == pygame.K_z:
                             self.player.die(pygame.Vector2(0, 5), self.player.pos - pygame.Vector2(5, 5))
                     elif self.state == "menu":
-                        if event.key == pygame.K_RETURN and self.time > 30:
+                        if event.key == pygame.K_RETURN and self.time > 30 and self.fade_dir != 1:
                             self.fade_dir = 1
+                            self.assets["sfx"]["enter"].play()
                     elif self.state == "talk":
                         if event.key == pygame.K_RETURN:
                             full_text = self.text[self.texts_idx][self.text_idx]
                             if self.text_timer > 10:
                                 if (self.text_timer - 30) * 0.8 < len(full_text):
                                     self.text_timer = len(full_text) / 0.8 + 30
+                                    self.assets["sfx"]["enter"].play()
                                 else:
                                     self.text_idx += 1
                                     if self.text_idx == len(self.text[self.texts_idx]):
                                         self.text_idx -= 1
                                         self.fade_dir = 1
                                     self.text_timer = 0
+                                    self.assets["sfx"]["enter"].play()
                     elif self.state == "spin":
                         if event.key == pygame.K_RETURN:
-                            if not self.spin_alpha < 1:
+                            if not self.spin_alpha < 1 and self.fade_dir == 0:
                                 self.wheel_vel = math.pi * 0.3 + random.random() * math.pi
                                 self.spin_alpha = 0.99
                                 self.wheel_scale = 0.8
                                 self.wheel_text = ""
+                                self.assets["sfx"]["enter"].play()
                             elif self.wheel_vel < 0.001:
                                 self.fade_dir = 1
+                                self.assets["sfx"]["enter"].play()
                     elif self.state == "death":
                         if event.key == pygame.K_RETURN:
                             self.fade_dir = 1
                             self.strikes -= 1
+                            self.assets["sfx"]["button"].play()
                 elif event.type == pygame.KEYUP:
                     if self.state == "game":
                         if event.key in {pygame.K_UP, pygame.K_SPACE, pygame.K_w}:
@@ -1258,6 +1329,12 @@ class App:
             self.dt = min(self.dt, 3) * self.slomo # if you're under 20 fps you're screwed anyway
             self.last_time = time.time()
             self.time += self.dt
+
+            if self.music_volume < self.target_music_volume:
+                self.music_volume = min(self.target_music_volume, self.music_volume + 0.1 * self.dt)
+            else:
+                self.music_volume = max(self.target_music_volume, self.music_volume - 0.1 * self.dt)
+            pygame.mixer.music.set_volume(self.music_volume)
 
             if self.state == "game":
                 self.update()
