@@ -7,15 +7,19 @@ from .particles import *
 from .player import Sword, Pepper, Shotgun
 from .anim import Anim
 
+from copy import deepcopy
+
 BOUNCE = 0.5
 FRICTION = 0.8
 
 class Enemy:
-    def __init__(self, app, dimensions, start_pos, num=0):
+    def __init__(self, app, dimensions, start_pos, num=0, guest=False):
         self.app = app
         self.num = num
         self.dimensions = pygame.Vector2(dimensions)
         self.pos = pygame.Vector2(start_pos)
+
+        self.guest = guest
         
         self.falling = 23434
         self.grounded = 0
@@ -29,7 +33,7 @@ class Enemy:
         # for the animations
         self.flip = False
 
-        self.build_animation(self.app.assets["npc"]["kitchen"][random.choice(["1", "2", "3"])])
+        self.build_animation(self.app.assets["npc"]["kitchen"][random.choice(["1", "2", "3"])] if not guest else self.app.assets["npc"]["guests"][random.choice(list(self.app.assets["npc"]["guests"].keys()))], guest)
         self.img = self.idle.animation[0].copy()
 
         self.node_radius = self.dimensions.x * 0.35
@@ -62,14 +66,22 @@ class Enemy:
         self.pause_time = random.random() * 10 + 50 * self.app.difficulty
         self.verlet_timer = 0
 
+        self.offset = pygame.Vector2(0, 0)
+        if self.guest:
+            self.offset = pygame.Vector2(-12, 0)
     
-    def build_animation(self, dictionary):
+    def build_animation(self, dictionary, guest=False):
         self.asset_dict = dictionary
-        self.idle = Anim(dictionary["idle"], 0.1)
-        self.run = Anim(dictionary["run"], 0.1)
-        self.jump = Anim(dictionary["jump"], 0.1, False)
-        self.land = Anim(dictionary["land"], 0.2, False)
-        self.punch = Anim(dictionary["punch"], 0.4, False)
+        self.idle = Anim(dictionary["idle"].copy(), 0.1)
+        self.run = Anim(dictionary["run"].copy(), 0.1)
+        if not guest:
+            self.jump = Anim(dictionary["jump"], 0.1, False)
+            self.land = Anim(dictionary["land"], 0.2, False)
+            self.punch = Anim(dictionary["punch"], 0.4, False)
+        else:
+            self.land = deepcopy(self.idle)
+            self.jump = deepcopy(self.idle)
+            self.punch = deepcopy(self.idle)
     
     def handle_animation(self, dt):
         if self.attacking:
@@ -468,6 +480,8 @@ class Enemy:
         if not self.dead:
             self.sword.offset = (-4, -4)
             offset = pygame.Vector2(-3, 0)
+            if self.guest:
+                offset = pygame.Vector2(-12, 0)
             anim = self.handle_animation(self.app.dt)
             anim.flip = self.flip
             # pygame.draw.rect(surf, (255, 0, 0), (self.pos.x - scroll[0], self.pos.y - scroll[1], self.dimensions.x, self.dimensions.y))

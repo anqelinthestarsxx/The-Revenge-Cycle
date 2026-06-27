@@ -121,6 +121,7 @@ class App:
             "restaurant_bg2": load_image("backgrounds/restaurant-bg-no-plants.png"),
             "rewind": load_image("rewind.png")
         }
+        self.load_guests()
 
         self.noiseTex = self.ctx.texture(self.assets["noise"].get_size(), 4)
         self.noiseTex.filter = (moderngl.LINEAR, moderngl.LINEAR)
@@ -141,7 +142,7 @@ class App:
         for loc in self.tile_map.tile_map.copy():
             if self.tile_map.tile_map[loc]["type"] == "enemy":
                 tile = self.tile_map.tile_map[loc]
-                self.enemies.append(Enemy(self, [15, 31], [self.tile_map.tile_map[loc]["pos"][0] * TILE_SIZE, self.tile_map.tile_map[loc]["pos"][1] * TILE_SIZE], num=len(self.enemies)))
+                self.enemies.append(Enemy(self, [9, 31], [self.tile_map.tile_map[loc]["pos"][0] * TILE_SIZE, self.tile_map.tile_map[loc]["pos"][1] * TILE_SIZE], num=len(self.enemies), guest=True))
                 del self.tile_map.tile_map[loc]
 
         self.scroll = pygame.Vector2(0, 0)
@@ -178,7 +179,7 @@ class App:
         self.series = 0
         self.level = 0
 
-        self.state = "menu"
+        self.state = "game"
 
         self.text = [[
             "Food is a very serious business...", 
@@ -249,6 +250,20 @@ class App:
         self.cycles = 0
         self.max_cycles = 0
 
+    def load_guests(self):
+        self.assets["npc"]["guests"] = {}
+        path = "data/images/npcs/guests/"
+        guest_dirs = os.listdir(path)
+        for d in guest_dirs:
+            idle_path = f"{path}{d}/idle.png"
+            run_path = f"{path}{d}/run.png"
+
+            idle_path = idle_path[len("data/images/"):len(idle_path)]
+            run_path = run_path[len("data/images/"):len(run_path)]
+
+            self.assets["npc"]["guests"][d] = {}
+            self.assets["npc"]["guests"][d]["idle"] = load_animation(idle_path, 32, 32, 4)
+            self.assets["npc"]["guests"][d]["run"] = load_animation(run_path, 32, 32, 4)
     
     def death(self):
         level_size = (self.level_surf.get_width() * self.ls_scale, self.level_surf.get_height() * self.ls_scale)
@@ -308,7 +323,7 @@ class App:
                 self.state = "menu"
                 self.text_idx = 0
                 self.texts_idx = 0
-            self.cycles = 0
+                self.cycles = 0
         
         if self.fade == 0 and self.fade_dir == -1:
             self.fade_dir = 0
@@ -667,7 +682,7 @@ class App:
         for loc in self.tile_map.tile_map.copy():
             if self.tile_map.tile_map[loc]["type"] == "enemy":
                 tile = self.tile_map.tile_map[loc]
-                self.enemies.append(Enemy(self, [15, 31], [self.tile_map.tile_map[loc]["pos"][0] * TILE_SIZE, self.tile_map.tile_map[loc]["pos"][1] * TILE_SIZE], num=len(self.enemies)))
+                self.enemies.append(Enemy(self, [9, 31], [self.tile_map.tile_map[loc]["pos"][0] * TILE_SIZE, self.tile_map.tile_map[loc]["pos"][1] * TILE_SIZE], num=len(self.enemies), guest=(self.level != 2)))
                 del self.tile_map.tile_map[loc]
 
         self.scroll = pygame.Vector2(0, 0)

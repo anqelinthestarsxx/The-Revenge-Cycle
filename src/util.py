@@ -21,7 +21,7 @@ def load_font(path, size=8) -> pygame.Font:
     return pygame.font.Font(get_script_path() + BASE_FONT_PATH + path, size)
 
 def load_image(path) -> pygame.Surface:
-    surf = pygame.image.load(get_script_path() + BASE_IMG_PATH + path).convert()
+    surf = pygame.image.load(get_script_path() + BASE_IMG_PATH + path).convert_alpha()
     surf.set_colorkey((0, 0, 0))
     print(f"Loaded image from `{get_script_path() + BASE_IMG_PATH + path}`")
     return surf
