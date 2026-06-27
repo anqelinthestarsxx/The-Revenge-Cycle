@@ -179,7 +179,7 @@ class App:
         self.series = 0
         self.level = 0
 
-        self.state = "game"
+        self.state = "menu"
 
         self.text = [[
             "Food is a very serious business...", 
@@ -262,8 +262,8 @@ class App:
             run_path = run_path[len("data/images/"):len(run_path)]
 
             self.assets["npc"]["guests"][d] = {}
-            self.assets["npc"]["guests"][d]["idle"] = load_animation(idle_path, 32, 32, 4)
-            self.assets["npc"]["guests"][d]["run"] = load_animation(run_path, 32, 32, 4)
+            self.assets["npc"]["guests"][d]["idle"] = load_animation_alpha(idle_path, 32, 32, 4)
+            self.assets["npc"]["guests"][d]["run"] = load_animation_alpha(run_path, 32, 32, 4)
     
     def death(self):
         level_size = (self.level_surf.get_width() * self.ls_scale, self.level_surf.get_height() * self.ls_scale)

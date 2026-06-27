@@ -21,7 +21,7 @@ def load_font(path, size=8) -> pygame.Font:
     return pygame.font.Font(get_script_path() + BASE_FONT_PATH + path, size)
 
 def load_image(path) -> pygame.Surface:
-    surf = pygame.image.load(get_script_path() + BASE_IMG_PATH + path).convert_alpha()
+    surf = pygame.image.load(get_script_path() + BASE_IMG_PATH + path).convert()
     surf.set_colorkey((0, 0, 0))
     print(f"Loaded image from `{get_script_path() + BASE_IMG_PATH + path}`")
     return surf
@@ -38,9 +38,17 @@ def load_sound(path) -> pygame.mixer.Sound:
     sound.set_volume(0.4)
     return sound
 
-
 def load_animation(path, xsize, y, length):
     sheet = load_image(path)
+    animation = []
+    for x in range(length):
+        animation.append(snip(sheet, [x * xsize, 0], [xsize, y]))
+    return animation
+
+def load_animation_alpha(path, xsize, y, length):
+    sheet = pygame.image.load(get_script_path() + BASE_IMG_PATH + path).convert_alpha()
+    sheet.set_colorkey((0, 0, 0))
+    print(f"Loaded image from `{get_script_path() + BASE_IMG_PATH + path}`")
     animation = []
     for x in range(length):
         animation.append(snip(sheet, [x * xsize, 0], [xsize, y]))
