@@ -119,24 +119,38 @@ class App:
             "restaurant_bg2": load_image("backgrounds/restaurant-bg-no-plants.png"),
             "rewind": load_image("rewind.png"),
             "sfx": {
-                "button": load_sound("button.ogg"),
-                "knife_death": load_sound("death_0.ogg"),
+                "button": load_sound("button.ogg"), # check
                 "explosion0": load_sound("explosion.ogg"),
                 "explosion1": load_sound("explosion_3.ogg"),
-                "fire": load_sound("fire.ogg"),
-                "bullet_hit": load_sound("hit.ogg"),
-                "punch_hit": load_sound("hit_3.ogg"),
-                "cinematic_boom": load_sound("intro.ogg"),
-                "thunder": load_sound("thunder.ogg"),
-                "shoot": load_sound("shoot.ogg"),
-                "raining": load_sound("raining.ogg"),
-                "dial_tick": load_sound("switch8.ogg"),
-                "dial_finish": load_sound("switch31.ogg"),
-                "swoosh": load_sound("swoosh.ogg"),
-                "vanish": load_sound("vanish.ogg"),
-                "sword_slash": load_sound("slash.ogg"),
-                "transition": load_sound("transition.ogg"),
-                "enter": load_sound("click3.ogg")
+                "fire": load_sound("fire.ogg"), # check
+                "bullet_hit": load_sound("hit.ogg"), # check
+                "punch_hit": load_sound("hit_3.ogg"), # check
+                "cinematic_boom": load_sound("intro.ogg"), # check
+                "thunder": load_sound("thunder.ogg"), # check
+                "shoot": load_sound("shoot.ogg"), # check
+                "raining": load_sound("raining.ogg"), # check
+                "dial_tick": load_sound("switch8.ogg"), # check
+                "dial_finish": load_sound("switch31.ogg"), # check
+                "swoosh": load_sound("swoosh.ogg"), # check
+                "vanish": load_sound("vanish.ogg"), # check
+                "sword_slash": load_sound("slash.ogg"), # check
+                "transition": load_sound("transition.ogg"), # check
+                "enter": load_sound("click3.ogg"), # check
+                "throw_punch": load_sound("click1.ogg"), # check
+                "hiya": load_sound("hiya.ogg"),# check
+                "shotgun": load_sound("shotgun.ogg"),
+                "shotgun_long": load_sound("shotgun_ind.ogg"), # check
+                "pain1": load_sound("pain1.ogg"), # check
+                "drone": load_sound("drone.ogg"),
+                "shot": load_sound("shot.ogg"),
+                "sword_death": load_sound("death_0.ogg"), # check
+                "pain2": load_sound("pain2.ogg"),
+                "pain3": load_sound("pain3.ogg"),
+                "pain4": load_sound("pain4.ogg"),
+                "pain5": load_sound("pain5.ogg"),
+                "scream1": load_sound("scream1.ogg"),
+                "scream2": load_sound("scream2.ogg"),
+                "scream3": load_sound("scream3.ogg")
             }
         }
         pygame.mixer.music.load(get_script_path() + "data/audio/folia.ogg")
@@ -155,7 +169,11 @@ class App:
 
         self.target_music_volume = 0.4
         self.music_volume = 0.4
+        self.wheel_select_timer = 0
+        self.played_indicator = False
 
+
+        self.last_screamed = 10000
 
         self.noiseTex = self.ctx.texture(self.assets["noise"].get_size(), 4)
         self.noiseTex.filter = (moderngl.LINEAR, moderngl.LINEAR)
@@ -278,7 +296,7 @@ class App:
 
         self.weapon = "shotgun"
 
-        self.strikes = 3
+        self.strikes = 5
         self.rs_hover = False
 
         self.cycles = 0
@@ -598,6 +616,8 @@ class App:
         self.fade = pygame.math.clamp(self.fade + self.fade_dir * self.dt * 0.014, 0, 1)
         if self.fade_dir == 1 and self.fade == 1:
             self.state = "game"
+            self.played_indicator = False
+            self.wheel_select_timer = 0
             self.fade_dir = -1
             self.assets["sfx"]["transition"].play()
         
@@ -677,6 +697,7 @@ class App:
         pygame.gfxdraw.trigon(self.ui_surf, int(center[0] + radius - 5), int(center[1]), int(center[0] + radius + 5), int(center[1] - 5), int(center[0] + radius + 5), int(center[1] + 5), (219, 224, 231))
 
         if self.wheel_vel < 0.001 and self.spin_alpha < 1:
+            self.wheel_select_timer += self.dt
             self.wheel_vel = 0
             idx = 0
             min_dist = 12232
@@ -694,6 +715,19 @@ class App:
 
                 self.player.mode = ["pepper", "fists", "shotgun", "sword"][idx]
                 self.weapon = self.player.mode
+            
+            if self.wheel_select_timer > 30 and not self.played_indicator:
+                if text == "Chilli Bomb":
+                    self.assets["sfx"]["fire"].play()
+                elif text == "Bare Hands":
+                    self.assets["sfx"]["hiya"].play()
+                elif text == "Boning Knife":
+                    self.assets["sfx"]["sword_slash"].play()
+                elif text == "Shotgun":
+                    self.assets["sfx"]["shotgun_long"].play
+                
+                self.played_indicator = True
+
             # mask = font_surf.
             font_surf = self.bold_font.render(f"Press [ENTER] to go {self.wheel_text}", False, (20, 16, 32))
             self.ui_surf.blit(font_surf, (self.ui_surf.get_width() * 0.5 - font_surf.get_width() * 0.5, self.ui_surf.get_height() - 16))
@@ -722,7 +756,7 @@ class App:
         self.prog["levelScale"].value = self.ls_scale
     
     def next_level(self):
-        self.strikes = 3
+        self.strikes = 5
         orig_series = self.series
         self.level += 1
         series = SERIES_1 if self.series == 0 else SERIES_2
@@ -1042,8 +1076,11 @@ class App:
         self.tile_map.grass_manager.update([self.player.get_rect()])
 
         complete = True
+        panicked = False
         for enemy in self.enemies:
             enemy.update(self.dt)
+            if enemy.mood != "passive" and not enemy.dead: 
+                panicked = True
             if not enemy.dead:
                 complete = False
             if self.player.dead:
@@ -1052,6 +1089,11 @@ class App:
             self.level_complete = True
             # if not self.player.dead and random.random() < 0.005:
                 # enemy.pepper.shoot(pygame.Vector2(self.player.get_rect().center) + pygame.Vector2(random.random() * 50 - 25, random.random() * 50 - 25))
+        
+        self.last_screamed += self.dt
+        if self.last_screamed > 150 and panicked:
+            self.assets["sfx"]["scream" + str(random.randint(1, 3))].play()
+            self.last_screamed = random.random() * 60
 
         # render to screen
         self.screen.fill((14, 130, 206))
@@ -1179,6 +1221,7 @@ class App:
         if self.fade_dir == 1 and self.fade == 1:
             if not self.player.dead:
                 self.next_level()
+                self.assets["sfx"]["transition"].play()
             else:
                 self.state = "death"
                 if self.cycles > self.max_cycles:
@@ -1237,6 +1280,7 @@ class App:
                             if self.player.mode == "sword":
                                 if self.player.sword.attacked > 10:
                                     self.player.sword.attack()
+                                    self.assets["sfx"]["swoosh"].play()
                                 self.player.sword.update()
                             elif self.player.mode == "shotgun":
                                 self.player.shotgun.shoot()
@@ -1252,6 +1296,7 @@ class App:
                             elif self.player.mode == "fists" and not self.player.attacking:
                                 self.player.punch.reset()
                                 self.player.attacking = True
+                                self.assets["sfx"]["throw_punch"].play()
                         elif event.key == pygame.K_z:
                             self.player.die(pygame.Vector2(0, 5), self.player.pos - pygame.Vector2(5, 5))
                     elif self.state == "menu":
@@ -1274,12 +1319,13 @@ class App:
                                     self.assets["sfx"]["enter"].play()
                     elif self.state == "spin":
                         if event.key == pygame.K_RETURN:
-                            if not self.spin_alpha < 1 and self.fade_dir == 0:
-                                self.wheel_vel = math.pi * 0.3 + random.random() * math.pi
-                                self.spin_alpha = 0.99
-                                self.wheel_scale = 0.8
-                                self.wheel_text = ""
-                                self.assets["sfx"]["enter"].play()
+                            if not self.spin_alpha < 1:
+                                if self.fade_dir == 0:
+                                    self.wheel_vel = math.pi * 0.3 + random.random() * math.pi
+                                    self.spin_alpha = 0.99
+                                    self.wheel_scale = 0.8
+                                    self.wheel_text = ""
+                                    self.assets["sfx"]["enter"].play()
                             elif self.wheel_vel < 0.001:
                                 self.fade_dir = 1
                                 self.assets["sfx"]["enter"].play()

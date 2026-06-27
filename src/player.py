@@ -31,6 +31,8 @@ class Pepper:
         self.player = player
     
     def explode(self, pos, vel):
+        self.app.assets["sfx"]["explosion0"].play()
+        self.app.assets["sfx"]["fire"].play()
         self.app.screen_shake = max(self.app.screen_shake, 8)
         circle = pygame.geometry.Circle(pos[0], pos[1], self.explode_radius)
         for _ in range(random.randint(20, 30)):
@@ -101,6 +103,7 @@ class Pepper:
         self.timer = 0
 
         self.peppers.append([start, vel, 0, 0])
+        self.app.assets["sfx"]["button"].play()
     
     def update(self):
         self.timer += self.app.dt
@@ -192,6 +195,8 @@ class Shotgun:
             self.app.particles[-1].speed = 2
             self.app.particles[-1].decay = 50
             self.app.sparks.append(Spark([pos[0] + 1, pos[1] + 1], angle +( random.random() - 0.5) * 0.25, random.random() * 3, (219, 224, 231)))
+        
+        self.app.assets["sfx"]["shoot"].play()
     
     def update(self):
         self.timer += self.app.dt
@@ -211,6 +216,7 @@ class Shotgun:
             bullet[0][1] += math.sin(bullet[1]) * speed
 
             if self.app.tile_map.solid_check(bullet[0]):
+                self.app.assets["sfx"]["bullet_hit"].play()
                 kill = True
             else:
                 if self.player:
@@ -219,12 +225,16 @@ class Shotgun:
                             kill = True
                             force = 1
                             enemy.die(pygame.Vector2(math.cos(bullet[1]) * speed * force, math.sin(bullet[1]) * speed * force), pygame.Vector2(bullet[0]))
+                            self.app.assets["sfx"]["shoot"].play()
+                            self.app.assets["sfx"]["explosion1"].play()
                 else:
                     if self.app.player.get_rect().collidepoint(bullet[0][0], bullet[0][1]) and not self.app.player.dead:
                         kill = True
                         force = 1
                         self.app.player.death_message = random.choice(["was shot like a dog.", "got their belly pumped full of lead.", "ate buckshot."])
                         self.app.player.die(pygame.Vector2(math.cos(bullet[1]) * speed * force, math.sin(bullet[1]) * speed * force), pygame.Vector2(bullet[0]))
+                        self.app.assets["sfx"]["shoot"].play()
+                        self.app.assets["sfx"]["explosion1"].play()
 
             bullet[2] += self.app.dt
             if bullet[2] > 240:
@@ -440,6 +450,11 @@ class Player:
     
     def die(self, impact: pygame.Vector2, impact_point: pygame.Vector2):
         if not self.dead:
+            if self.color == "black":
+                self.app.assets["sfx"]["pain2"].play()
+            else:
+                self.app.assets["sfx"]["pain3"].play()
+
             impact = pygame.Vector2(impact)
             impact_point = pygame.Vector2(impact_point)
             self.dead = True
@@ -595,15 +610,17 @@ class Player:
 
         if not self.app.level_complete:
             self.pos.x = max(0, min(TILE_SIZE * CHUNK_SIZE * LEVEL_WIDTH - self.dimensions.x, self.pos.x))
-        else:
+        elif not self.finished:
             if self.color == "black":
                 self.pos.x = max(0, self.pos.x)
                 if self.pos.x > TILE_SIZE * CHUNK_SIZE * LEVEL_WIDTH:
                     self.finished = True
+                    self.app.assets["sfx"]["vanish"].play()
             elif self.color == "white":
                 self.pos.x = min(TILE_SIZE * CHUNK_SIZE * LEVEL_WIDTH - self.dimensions.x, self.pos.x)
                 if self.pos.x < -self.dimensions.x:
                     self.finished = True
+                    self.app.assets["sfx"]["vanish"].play()
         r = self.get_rect()
         for rect in self.app.tile_map.physics_rects_around(r.center):
             if r.colliderect(rect):

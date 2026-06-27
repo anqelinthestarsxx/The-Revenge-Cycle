@@ -66,6 +66,8 @@ class Enemy:
         self.pause_time = random.random() * 10 + 50 * self.app.difficulty
         self.verlet_timer = 0
 
+        self.played_indicator = False
+
         self.offset = pygame.Vector2(0, 0)
         if self.guest:
             self.offset = pygame.Vector2(-12, 0)
@@ -119,6 +121,7 @@ class Enemy:
     
     def die(self, impact: pygame.Vector2, impact_point: pygame.Vector2):
         if not self.dead:
+            self.app.assets["sfx"][random.choice(["pain1", "pain4", "pain5"])].play()
             impact = pygame.Vector2(impact)
             impact_point = pygame.Vector2(impact_point)
             self.dead = True
@@ -300,7 +303,7 @@ class Enemy:
                     self.movement.y = 0
                     self.pos.y = r.y
             
-            # update movemen
+            # update movement
             self.movement.x *= self.friction ** dt
 
             self.movement.y += self.gravity * dt
@@ -316,14 +319,17 @@ class Enemy:
             if self.mood == "angry" and self.sword.attacking and self.mode == "sword" and not self.app.player.attacking and not self.app.player.sword.attacking:
                 if self.app.player.collide_mask(self.sword.attack_mask, self.sword.attack_offset):
                     self.app.player.death_message = random.choice(["was rigged on a steak knife.", "was unseamed from the nave to the chaps.", "was filleted like a fish."])
+                    self.app.assets["sfx"]["sword_death"].play()
                     self.app.player.die(pygame.Vector2(2, 2), (pygame.Vector2(self.app.player.get_rect().center) + pygame.Vector2(self.get_rect().center)) * 0.5)
             
             if self.app.player.sword.attacking and self.app.player.mode == "sword":
                 if self.collide_mask(self.app.player.sword.attack_mask, self.app.player.sword.attack_offset):
                     self.die(pygame.Vector2(2, 2), (pygame.Vector2(self.app.player.get_rect().center) + pygame.Vector2(self.get_rect().center)) * 0.5)
+                    self.app.assets["sfx"]["sword_death"].play()
             if self.app.player.mode == "fists" and self.app.player.attacking:
                 if self.get_rect().colliderect(self.app.player.get_attack_rect()):
                     self.die(pygame.Vector2(2, 2), (pygame.Vector2(self.app.player.get_rect().center) + pygame.Vector2(self.get_rect().center)) * 0.5)
+                    self.app.assets["sfx"]["punch_hit"].play()
             
             if self.app.player.dead:
                 self.mood = "passive"
@@ -390,7 +396,13 @@ class Enemy:
             self.pause_time = random.random() * 60 + 60 * self.app.difficulty
             pause = True
         
+        if self.pause_time > 100 and not self.played_indicator:
+            self.played_indicator = True
+            if self.mode == "shotgun":
+                self.app.assets["sfx"]["shotgun"].play()
+        
         if pause:
+            self.played_indicator = False
             if self.mode == "shotgun":
                 self.shotgun.shoot()
                 return
