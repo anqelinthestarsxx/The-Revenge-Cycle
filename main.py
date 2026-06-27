@@ -1330,7 +1330,7 @@ class App:
                                 self.fade_dir = 1
                                 self.assets["sfx"]["enter"].play()
                     elif self.state == "death":
-                        if event.key == pygame.K_RETURN:
+                        if event.key == pygame.K_RETURN and self.fade_dir == 0:
                             self.fade_dir = 1
                             self.strikes -= 1
                             self.assets["sfx"]["button"].play()
