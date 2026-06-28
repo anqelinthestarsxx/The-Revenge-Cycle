@@ -1,56 +1,29 @@
-# The-Revenge-Cycle
+# The Revenge Cycle
 
-# TODO:
- - [X] Platformer template
- - [ ] Art assets
- - [X] Tiles
- - [X] Player (idle, run & jump animations + land)
- - [ ] Same for enemies (guests, cooks (kitchen staff), chef)
- - [ ] Furniture (table + chair, oven, kitchen island, sink, lights hanging from ceiling)
- - [ ] Background + ceiling for indoors
- - [ ] Soundtrack
- - [X] Weapons (knife, spoon, big gun and knife for chef (for wrecking the restaurant), little container for range attacks (chilli powder, salt, alcohol etc), broom, slab of meat)
+Submission for the [Very Serious Juniper Game Dev Jam](https://itch.io/jam/theveryseriousjuniperdevgamejam), theme was 'spin the wheel'. You play as two chefs with a vendetta, who wreck each other's restaurants using randomly selected weapons, continuing the 'cycle' until one dies.
 
-# Combat
- - [X] Gun (aim with mouse)
- - [X] Knife (slash) - generate the arc?#
- - [X] Blood
- - [X] Verlet integration for knocking over physics + chairs
- - [X] Dead bodies
+## Running
 
-## Enemies:
- - [ ] Throwing knife
- - [ ] Close knife
- - [ ] chilli, alcohol, fire
- - [ ] Broom
+Make sure you have python and pip installed beforehand.
 
-# Polish:
- - Particles
- - Background
- - Trees
- - Grass
- - Clouds
+```
+# get source code:
+git clone --depth 1 https://github.com/anqelinthestarsxx/The-Revenge-Cycle.git
+cd The-Revenge-Cycle
 
-# Monday:
- - different weapons (chilli powder, bare fists)
- - NPC behaviour (panic, fighting, chilling)
+# install dependencies (NOTE: pygame-ce not pygame)
+pip install pygame-ce moderngl
 
-# Tuesday:
- - VFX + Gore
+# run it!
+python main.py
+```
 
-# Wednesday
- - Finish VFX
- - Actual levels + UI
- - SFX
- - Sound cues for enemies attacking
+If you already have pygame installed, you may need to remove it and install pygame-ce instead as such: `pip uninstall pygame`, then `pip install pygame-ce`.
 
-# Thursday
- - Death messages
- - Finish SFX and make soundtrack
- - Boss fight level if time
+## Screenshots:
 
-# Friday
- - Finishing touches
- - Build for Windows and playtest
-
-# difficulty: pause time + chance of getting angry
+<img width="1368" height="860" alt="Screenshot_20260628_103307" src="https://github.com/user-attachments/assets/f5df78a8-fd4f-49fb-965e-382f3d81c49e" />
+<img width="1387" height="792" alt="Screenshot_20260628_103203" src="https://github.com/user-attachments/assets/e7c2818f-b09f-4782-a05e-6a109d38388c" />
+<img width="1507" height="932" alt="Screenshot_20260627_205900" src="https://github.com/user-attachments/assets/c1067de2-0a8b-4382-bea8-4d86cc9e749f" />
+<img width="1621" height="1042" alt="Screenshot_20260627_205547" src="https://github.com/user-attachments/assets/1fee99c6-696a-4fe4-a85b-c608c3e394ad" />
+<img width="1621" height="1042" alt="Screenshot_20260627_202316" src="https://github.com/user-attachments/assets/4e17e66d-7ddc-46e7-bb2f-2c74253540f1" />
