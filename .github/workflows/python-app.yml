@@ -1,0 +1,55 @@
+name: Build macOS Binary
+
+on: 
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Pip install
+        run: |
+          python -m pip install --upgrade pip
+          pip install pygame-ce moderngl pyinstaller
+
+      - name: PyInstaller build
+        run: |
+          pyinstaller --onedir --windowed \
+          --target-arch arm64 \
+          --collect-all moderngl \
+          --add-data "data:data" \
+          --add-data "src:src" \
+          --paths . \
+          main.py
+
+      - name: Ad-hoc Sign Binary
+        run: |
+          codesign --force --deep --sign - dist/main.app || true
+
+      - name: Zip Artifact
+        run: |
+          cd dist
+          zip -r ../The-Revenge-Cycle-MacOS.zip main.app
+
+      - name: Check binary
+        run: |
+          chmod +x dist/main.app/Contents/MacOS/main
+          ./dist/main.app/Contents/MacOS/main & 
+          sleep 10
+          kill $! || echo "App closed, checking if it was a clean exit or a crash..."
+
+      - name: Upload Result
+        uses: actions/upload-artifact@v4
+        with:
+          name: macOS-Build-Package
+          path: The-Revenge-Cycle-MacOS.zip
