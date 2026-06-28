@@ -326,9 +326,10 @@ class App:
         self.ui_render_surf.fill((0, 0, 0))
         self.ui_surf.fill((0, 0, 0))
 
-        font_surf = self.bold_font.render(f"{"Elsa" if self.player.color == "black" else "Bart"} {self.player.death_message}", False, (53, 20, 40))
+        name = 'Elsa' if self.player.color == 'black' else 'Bart'
+        font_surf = self.bold_font.render(f"{name} {self.player.death_message}", False, (53, 20, 40))
         self.ui_surf.blit(font_surf, (self.ui_surf.get_width() * 0.5 - font_surf.get_width() * 0.5, self.ui_surf.get_height() * 0.4 * 50))
-        font_surf = self.bold_font.render(f"{"Elsa" if self.player.color == "black" else "Bart"} {self.player.death_message}", False, (219, 224, 231))
+        font_surf = self.bold_font.render(f"{name} {self.player.death_message}", False, (219, 224, 231))
         self.ui_surf.blit(font_surf, (self.ui_surf.get_width() * 0.5 - font_surf.get_width() * 0.5, self.ui_surf.get_height() * 0.4 - 1))
 
         font_surf = self.bold_font.render(f"High Score: {self.max_cycles} Cycles", False, (219, 224, 231))
