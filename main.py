@@ -304,14 +304,11 @@ class App:
 
     def load_guests(self):
         self.assets["npc"]["guests"] = {}
-        path = "data/images/npcs/guests/"
+        path = get_script_path() + "data/images/npcs/guests/"
         guest_dirs = os.listdir(path)
         for d in guest_dirs:
             idle_path = f"{path}{d}/idle.png"
             run_path = f"{path}{d}/run.png"
-
-            idle_path = idle_path[len("data/images/"):len(idle_path)]
-            run_path = run_path[len("data/images/"):len(run_path)]
 
             self.assets["npc"]["guests"][d] = {}
             self.assets["npc"]["guests"][d]["idle"] = load_animation_alpha(idle_path, 32, 32, 4)

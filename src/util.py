@@ -46,7 +46,7 @@ def load_animation(path, xsize, y, length):
     return animation
 
 def load_animation_alpha(path, xsize, y, length):
-    sheet = pygame.image.load(get_script_path() + BASE_IMG_PATH + path).convert_alpha()
+    sheet = pygame.image.load(path).convert_alpha()
     sheet.set_colorkey((0, 0, 0))
     print(f"Loaded image from `{get_script_path() + BASE_IMG_PATH + path}`")
     animation = []
