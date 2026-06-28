@@ -1,56 +1,21 @@
-# The-Revenge-Cycle
+# The Revenge Cycle
 
-# TODO:
- - [X] Platformer template
- - [ ] Art assets
- - [X] Tiles
- - [X] Player (idle, run & jump animations + land)
- - [ ] Same for enemies (guests, cooks (kitchen staff), chef)
- - [ ] Furniture (table + chair, oven, kitchen island, sink, lights hanging from ceiling)
- - [ ] Background + ceiling for indoors
- - [ ] Soundtrack
- - [X] Weapons (knife, spoon, big gun and knife for chef (for wrecking the restaurant), little container for range attacks (chilli powder, salt, alcohol etc), broom, slab of meat)
+Submission for the [Very Serious Juniper Game Dev Jam](https://itch.io/jam/theveryseriousjuniperdevgamejam), theme was 'spin the wheel'. You play as two chefs with a vendetta, who wreck each other's restaurants using randomly selected weapons, continuing the 'cycle' until one dies.
 
-# Combat
- - [X] Gun (aim with mouse)
- - [X] Knife (slash) - generate the arc?#
- - [X] Blood
- - [X] Verlet integration for knocking over physics + chairs
- - [X] Dead bodies
+## Running
 
-## Enemies:
- - [ ] Throwing knife
- - [ ] Close knife
- - [ ] chilli, alcohol, fire
- - [ ] Broom
+Make sure you have python and pip installed beforehand.
 
-# Polish:
- - Particles
- - Background
- - Trees
- - Grass
- - Clouds
+```
+# get source code:
+git clone --depth 1 https://github.com/anqelinthestarsxx/The-Revenge-Cycle.git
+cd The-Revenge-Cycle
 
-# Monday:
- - different weapons (chilli powder, bare fists)
- - NPC behaviour (panic, fighting, chilling)
+# install dependencies (NOTE: pygame-ce not pygame)
+pip install pygame-ce moderngl
 
-# Tuesday:
- - VFX + Gore
+# run it!
+python main.py
+```
 
-# Wednesday
- - Finish VFX
- - Actual levels + UI
- - SFX
- - Sound cues for enemies attacking
-
-# Thursday
- - Death messages
- - Finish SFX and make soundtrack
- - Boss fight level if time
-
-# Friday
- - Finishing touches
- - Build for Windows and playtest
-
-# difficulty: pause time + chance of getting angry
+If you already have pygame installed, you may need to remove it and install pygame-ce instead as such: `pip uninstall pygame`, then `pip install pygame-ce`.
